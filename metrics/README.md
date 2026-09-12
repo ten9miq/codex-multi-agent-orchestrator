@@ -212,15 +212,12 @@ Rootはcontroller_astraの結果をそのまま簡潔にまとめてください
 不要なagentは起動しないでください。
 ```
 
-Smoke Test直前に開始時刻を保存し、prompt実行後にvalidatorを実行します。
+「1. 最初に行うSmoke Test」で保存した`$SmokeStart`を使い、prompt実行後にvalidatorを実行します。
 
 ```powershell
-$SmokeStart = Get-Date
-
 python "$env:USERPROFILE\.codex\metrics\smoke.py" `
   --since $SmokeStart.ToString("o") `
-  --expect controller_astra `
-  --table
+  --expect controller_astra
 ```
 
 正常時は概ね次のようになります。
