@@ -61,7 +61,8 @@ def render_table(headers: list[str], rows: list[list[str]], *, right_columns: se
             pad_cell(value, widths[index], right=index in right_columns)
             for index, value in enumerate(row)
         ]
-        output.append("  " + " ".join(cells))
+        # 数値列が連続しても読み分けやすいよう、列間に2スペースを置く。
+        output.append("  " + "  ".join(cells))
     return output
 
 
