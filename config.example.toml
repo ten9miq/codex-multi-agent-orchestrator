@@ -1,17 +1,17 @@
 # Rootで常時使うモデル。routingと軽微なDirect処理を担当する。
-# 未指定時: Codexのアカウント/環境で設定された既定model（固定値ではない）。
+# 未指定時: Codexのmodel catalog / account default。config loaderに固定model値はない。
 model = "gpt-5.6-luna"
 # Rootの推論 effort。Rootを薄いRouterとして保ち、固定コストを抑える。
-# 未指定時: model/runtimeの既定reasoning effort。
+# 未指定時: 選択modelのcatalog default（Lunaのcatalog defaultはmedium）。
 model_reasoning_effort = "medium"
 # 利用可能なcontext windowの上限。auto-compact閾値は別途global設定しない。
-# 未指定時: model catalog/runtimeの既定context window（model・version依存）。
+# 未指定時: Luna/Terra/Solのcatalog context_windowは272000 tokens、max_context_windowは872000（CLI 0.154.0で確認）。
 model_context_window = 872000
 # 応答スタイル。Routerの判断と結果統合を簡潔・実務的にする。
-# 未指定時: Codexの既定personality。
+# 未指定時: personalityなし（組み込みのCodex指示を使用）。
 personality = "pragmatic"
 # 処理tier。速度優先のfast/priorityへ変更せず、標準tierを使う。
-# 未指定時: Codex/APIの既定service tier（環境・modelにより決まる）。
+# 未指定時: auto（backend/project設定に応じてtierを選択）。
 service_tier = "default"
 
 [features]
@@ -22,10 +22,10 @@ multi_agent = true
 # 未指定時: false相当。
 js_repl = false
 # Windows端末のterminal resize/reflow対応を有効にする。
-# 未指定時: CodexのWindows runtime既定値。
+# 未指定時: false（このテンプレートではtrueに固定）。
 terminal_resize_reflow = true
 # Codex Memory機能のゲート。具体的なMemory動作は別設定で定義する。
-# 未指定時: false相当またはruntime既定値（Codex version依存）。
+# 未指定時: false（feature flagを明示しない限り無効）。
 memories = true
 
 [features.multi_agent_v2]
@@ -33,65 +33,65 @@ memories = true
 # 未指定時: false相当。Root turnでV2を明示選択しない。
 enabled = true
 # 1 session内で同時に実行できるthread数の上限。agent増殖のceiling。
-# 未指定時: Multi-Agent runtimeの既定上限（Codex version依存）。
+# 未指定時: 4 threads（V2 default）。
 max_concurrent_threads_per_session = 4
 # wait系処理の最小timeout。短すぎるpollingによる無駄な再試行を避ける。
-# 未指定時: Multi-Agent runtimeの既定値。
+# 未指定時: 10000 ms（10秒）。
 min_wait_timeout_ms = 1200000
 # wait系処理の標準timeout。
-# 未指定時: Multi-Agent runtimeの既定値。
+# 未指定時: 30000 ms（30秒）。
 default_wait_timeout_ms = 1200000
 # wait系処理で許可する最大timeout。
-# 未指定時: Multi-Agent runtimeの既定値。
+# 未指定時: 3600000 ms（60分）。
 max_wait_timeout_ms = 1500000
 
 [agents]
 # agent_typeを省略したgeneric spawnのfallback model。named roleは各sectionで上書きする。
-# 未指定時: Codexのgeneric subagent既定model。
+# 未指定時: spawn元のparent modelを継承（config fieldは未設定）。
 default_subagent_model = "gpt-5.6-luna"
 # generic spawnのfallback reasoning effort。
-# 未指定時: Codexのgeneric subagent既定effort。
+# 未指定時: spawn元のparent effortを継承（config fieldは未設定）。
 default_subagent_reasoning_effort = "medium"
 # V1 fallback向けの深さ設定。V2のhard enforcementとはみなさず、role instructionとMetricsで構造を担保する。
-# 未指定時: runtimeの既定depth。V2ではhard enforcementとして信用しない。
+# 未指定時: 1（Rootから1層。V2では無視される）。
 max_depth = 2
 
 [agents.scout]
 # read-heavy探索を担当するLeaf。変更せず、簡潔な証拠を返す。
-# 未指定時: descriptionなし。
+# 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
 description = "read-heavyなrepository探索を担当し、ファイルを変更せず簡潔な証拠を返すScout。"
 # Scout固有のmodel/effortや委譲禁止ルールを定義するrole file。
-# 未指定時: role固有設定なし（generic subagent設定を使用）。
+# 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/scout.toml"
 
 [agents.worker_terra]
 # 明確なscopeの通常実装を担当するTerra High Worker。
-# 未指定時: descriptionなし。
+# 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
 description = "通常の明確にscopeされた実装を担当する主要Worker。"
 # Worker固有のmodel/effort、検証、結果形式を定義するrole file。
-# 未指定時: role固有設定なし（generic subagent設定を使用）。
+# 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/worker-terra.toml"
 
 [agents.controller_sol]
 # 複数module、未知の原因、設計判断を統合するSol Controller。
-# 未指定時: descriptionなし。
+# 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
 description = "非自明なdebug、複数module、設計判断を統合するController。"
 # Solの委譲ルール、Leaf選択、escalation protocolを定義するrole file。
-# 未指定時: role固有設定なし（generic subagent設定を使用）。
+# 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/controller-sol.toml"
 
 [agents.expert]
 # Sol配下で使う難しい局所分析・correctness review用のLeaf。
-# 未指定時: descriptionなし。
+# 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
 description = "難しい局所分析、correctness、security、reviewを担当するHigh-effort specialist。"
 # Expert固有のread-only方針と結果形式を定義するrole file。
-# 未指定時: role固有設定なし（generic subagent設定を使用）。
+# 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/expert.toml"
 
 [agents.controller_astra]
 # 最難関・高リスクのbounded escalation先。常用せず必要時だけ起動する。
-# 未指定時: descriptionなし。
+# 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
 description = "最難関architecture、debug、高リスク作業を担当するfrontier Controller。"
 # Astraの高コスト作業、Leaf選択、完遂条件を定義するrole file。
-# 未指定時: role固有設定なし（generic subagent設定を使用）。
+# 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/controller-astra.toml"
