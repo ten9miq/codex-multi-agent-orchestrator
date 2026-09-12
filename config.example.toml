@@ -1,43 +1,70 @@
+# Rootで常時使うモデル。routingと軽微なDirect処理を担当する。
 model = "gpt-5.6-luna"
+# Rootの推論 effort。Rootを薄いRouterとして保ち、固定コストを抑える。
 model_reasoning_effort = "medium"
+# 利用可能なcontext windowの上限。auto-compact閾値は別途global設定しない。
 model_context_window = 872000
+# 応答スタイル。Routerの判断と結果統合を簡潔・実務的にする。
 personality = "pragmatic"
+# 処理tier。速度優先のfast/priorityへ変更せず、標準tierを使う。
 service_tier = "default"
 
 [features]
+# Multi-Agent機能全体の有効化。
 multi_agent = true
+# JavaScript REPL機能。今回のオーケストレーションでは使用しない。
 js_repl = false
+# Windows端末のterminal resize/reflow対応を有効にする。
 terminal_resize_reflow = true
+# Codex Memory機能のゲート。具体的なMemory動作は別設定で定義する。
 memories = true
 
 [features.multi_agent_v2]
+# Multi-Agent V2 runtimeをRootから明示的に有効化する。
 enabled = true
+# 1 session内で同時に実行できるthread数の上限。agent増殖のceiling。
 max_concurrent_threads_per_session = 4
+# wait系処理の最小timeout。短すぎるpollingによる無駄な再試行を避ける。
 min_wait_timeout_ms = 1200000
+# wait系処理の標準timeout。
 default_wait_timeout_ms = 1200000
+# wait系処理で許可する最大timeout。
 max_wait_timeout_ms = 1500000
 
 [agents]
+# agent_typeを省略したgeneric spawnのfallback model。named roleは各sectionで上書きする。
 default_subagent_model = "gpt-5.6-luna"
+# generic spawnのfallback reasoning effort。
 default_subagent_reasoning_effort = "medium"
+# V1 fallback向けの深さ設定。V2のhard enforcementとはみなさず、role instructionとMetricsで構造を担保する。
 max_depth = 2
 
 [agents.scout]
+# read-heavy探索を担当するLeaf。変更せず、簡潔な証拠を返す。
 description = "read-heavyなrepository探索を担当し、ファイルを変更せず簡潔な証拠を返すScout。"
+# Scout固有のmodel/effortや委譲禁止ルールを定義するrole file。
 config_file = "agents/scout.toml"
 
 [agents.worker_terra]
+# 明確なscopeの通常実装を担当するTerra High Worker。
 description = "通常の明確にscopeされた実装を担当する主要Worker。"
+# Worker固有のmodel/effort、検証、結果形式を定義するrole file。
 config_file = "agents/worker-terra.toml"
 
 [agents.controller_sol]
+# 複数module、未知の原因、設計判断を統合するSol Controller。
 description = "非自明なdebug、複数module、設計判断を統合するController。"
+# Solの委譲ルール、Leaf選択、escalation protocolを定義するrole file。
 config_file = "agents/controller-sol.toml"
 
 [agents.expert]
+# Sol配下で使う難しい局所分析・correctness review用のLeaf。
 description = "難しい局所分析、correctness、security、reviewを担当するHigh-effort specialist。"
+# Expert固有のread-only方針と結果形式を定義するrole file。
 config_file = "agents/expert.toml"
 
 [agents.controller_astra]
+# 最難関・高リスクのbounded escalation先。常用せず必要時だけ起動する。
 description = "最難関architecture、debug、高リスク作業を担当するfrontier Controller。"
+# Astraの高コスト作業、Leaf選択、完遂条件を定義するrole file。
 config_file = "agents/controller-astra.toml"
