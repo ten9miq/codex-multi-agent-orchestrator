@@ -190,6 +190,50 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" `
 
 Astraは高コストなので、初期導入時に必ず実行する必要はありません。
 
+実行する場合は、Astra Controllerの起動だけを最小コストで確認します。AstraからScout、Worker、Expertをspawnさせません。
+
+Codexで次のpromptを実行してください。
+
+```text
+Multi-Agent Smoke Testです。
+
+Rootは必ず controller_astra agent を1体だけ起動してください。
+Root自身ではタスクを処理しないでください。
+
+controller_astra は他のagentを起動せず、read-onlyでこのrepositoryのトップレベル構成を簡単に確認してください。
+ファイルの変更、実装、詳細調査は不要です。
+
+確認が完了したら、controller_astra は次の文字列を含めてRootへ結果を返してください。
+
+ASTRA_SMOKE_OK
+
+Rootはcontroller_astraの結果をそのまま簡潔にまとめてください。
+
+不要なagentは起動しないでください。
+```
+
+Smoke Test直前に開始時刻を保存し、prompt実行後にvalidatorを実行します。
+
+```powershell
+$SmokeStart = Get-Date
+
+python "$env:USERPROFILE\.codex\metrics\smoke.py" `
+  --since $SmokeStart.ToString("o") `
+  --expect controller_astra `
+  --table
+```
+
+正常時は概ね次のようになります。
+
+```text
+[OK] ROOT | gpt-5.6-luna / medium / v2
+└─ [OK] controller_astra | gpt-6-astra / high / v2
+
+RESULT: PASS
+```
+
+このテストの目的はAstraの配線確認だけです。Astraがさらにagentをspawnした場合は、期待していない追加tokenの原因として扱います。
+
 ---
 
 
