@@ -11,6 +11,8 @@ $source = Join-Path $repoRoot 'config.example.toml'
 $destination = Join-Path $CodexHome 'config.toml'
 $sourceAgents = Join-Path $repoRoot 'agents'
 $destinationAgents = Join-Path $CodexHome 'agents'
+$sourceMetrics = Join-Path $repoRoot 'metrics'
+$destinationMetrics = Join-Path $CodexHome 'metrics'
 
 New-Item -ItemType Directory -Force -Path $CodexHome | Out-Null
 if (Test-Path -LiteralPath $destination) {
@@ -22,6 +24,11 @@ if (Test-Path -LiteralPath $destination) {
 Copy-Item -LiteralPath $source -Destination $destination -Force
 New-Item -ItemType Directory -Force -Path $destinationAgents | Out-Null
 Copy-Item -Path (Join-Path $sourceAgents '*.toml') -Destination $destinationAgents -Force
+New-Item -ItemType Directory -Force -Path $destinationMetrics | Out-Null
+Get-ChildItem -LiteralPath $sourceMetrics -File |
+    Where-Object { $_.Name -notin @('state.json', 'routing-metrics.jsonl') } |
+    Copy-Item -Destination $destinationMetrics -Force
 Write-Host "公開テンプレートを適用しました: $destination"
 Write-Host "agent設定を適用しました: $destinationAgents"
+Write-Host "Metricsを適用しました: $destinationMetrics"
 Write-Host '端末固有のnotify/MCP/projects設定は必要に応じて手動で戻してください。'
