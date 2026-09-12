@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$CodexHome = $env:CODEX_HOME,
     [switch]$WhatIf
 )
@@ -72,12 +72,12 @@ $existingConfig = Test-Path -LiteralPath $destination
 
 if ($WhatIf) {
     if ($existingConfig) {
-        Write-Host "Would merge existing config.toml (dry-run): $destination"
+        Write-Host "既存config.tomlをマージします（dry-run）: $destination"
     } else {
-        Write-Host "Would create config.toml (dry-run): $destination"
+        Write-Host "config.example.tomlを新規配置します（dry-run）: $destination"
     }
-    Write-Host "Would install agent configs (dry-run): $destinationAgents"
-    Write-Host "Would install Metrics (dry-run): $destinationMetrics"
+    Write-Host "agent設定を配置します（dry-run）: $destinationAgents"
+    Write-Host "Metricsを配置します（dry-run）: $destinationMetrics"
     exit 0
 }
 
@@ -85,13 +85,13 @@ New-Item -ItemType Directory -Force -Path $CodexHome | Out-Null
 if (Test-Path -LiteralPath $destination) {
     $backup = "$destination.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Copy-Item -LiteralPath $destination -Destination $backup
-    Write-Host "Backed up existing config.toml: $backup"
+    Write-Host "既存config.tomlをバックアップしました: $backup"
     $existingText = Get-Content -LiteralPath $destination -Raw
     Write-Utf8NoBom -Path $destination -Text (Get-MergedConfigText -ExistingText $existingText -TemplateText $templateText)
-    Write-Host "Merged managed template settings into existing config.toml: $destination"
+    Write-Host "公開テンプレートの管理対象だけを既存config.tomlへマージしました: $destination"
 } else {
     Write-Utf8NoBom -Path $destination -Text $templateText
-    Write-Host "Created config.toml from public template: $destination"
+    Write-Host "公開テンプレートを新規配置しました: $destination"
 }
 New-Item -ItemType Directory -Force -Path $destinationAgents | Out-Null
 Copy-Item -Path (Join-Path $sourceAgents '*.toml') -Destination $destinationAgents -Force
@@ -99,7 +99,7 @@ New-Item -ItemType Directory -Force -Path $destinationMetrics | Out-Null
 Get-ChildItem -LiteralPath $sourceMetrics -File |
     Where-Object { $_.Name -notin @('state.json', 'routing-metrics.jsonl') } |
     Copy-Item -Destination $destinationMetrics -Force
-Write-Host "Applied public template: $destination"
-Write-Host "Applied agent configs: $destinationAgents"
-Write-Host "Applied Metrics: $destinationMetrics"
-Write-Host 'Preserved machine-specific notify/MCP/projects settings.'
+Write-Host "公開テンプレートを適用しました: $destination"
+Write-Host "agent設定を適用しました: $destinationAgents"
+Write-Host "Metricsを適用しました: $destinationMetrics"
+Write-Host '端末固有のnotify/MCP/projects設定を保持しました。'
