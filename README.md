@@ -80,6 +80,14 @@ Root contextは全agentの作業履歴ではなく、routing stateとdistilled k
 
 `model_context_window = 872000`はheadroomを持たせる設定です。一方、`model_auto_compact_token_limit`はglobal設定せず、Rootと子agentの実測後に判断します。
 
+Context関連の用語は次の意味です。
+
+| 用語 | 日本語での意味 | 値 |
+|---|---|---:|
+| `catalog.context_window`（モデルの標準値） | config未指定時のcatalog基準値 | 272000 |
+| `catalog.max_context_window`（configで指定できる上限） | modelごとに許可された最大値 | 872000 |
+| `model_context_window`（config.tomlの指定値） | この構成が実際に指定するwindow | 872000 |
+
 ## Metricsの役割
 
 MetricsのSource of Truthは、モデルの自己申告ではなく次のrollout JSONLです。

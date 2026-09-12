@@ -18,7 +18,7 @@ full historyの複製はchildの入力tokenと無関係な文脈を増やしま�
 
 ## context windowとauto-compactを分離する
 
-`model_context_window = 872000`はheadroomを広げる候補です。一方、`model_auto_compact_token_limit`をglobalに設定すると子Controllerにも影響し、複雑なSol/Astra作業を早期compactさせる可能性があります。そのため現時点ではcontext windowだけを設定し、compact閾値はMetrics実測後に判断します。
+`catalog.context_window`（モデルの標準値）は272K、`catalog.max_context_window`（configで指定できる上限）は872Kです。`model_context_window`（config.tomlの指定値）を872000にしてheadroomを広げます。一方、`model_auto_compact_token_limit`をglobalに設定すると子Controllerにも影響し、複雑なSol/Astra作業を早期compactさせる可能性があります。そのため現時点ではcontext windowだけを設定し、compact閾値はMetrics実測後に判断します。
 
 ## 結果を圧縮して返す
 

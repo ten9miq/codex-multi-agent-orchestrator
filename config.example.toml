@@ -5,8 +5,10 @@ model = "gpt-5.6-luna"
 # 未指定時: 選択modelのcatalog default（Lunaのcatalog defaultはmedium）。
 model_reasoning_effort = "medium"
 # 利用可能なcontext windowを明示的に872000 tokensへ広げるoverride。
-# 未指定時のcatalog context_window: 272000 tokens（272K）。max_context_window: 872000 tokens（872K）。
+# 未指定時のcatalog context_window（モデルの標準値）: 272000 tokens（272K）。
+# catalog max_context_window（configで指定できる上限）: 872000 tokens（872K）。
 # 画面や実効入力領域ではsystem/tool出力用のheadroomが差し引かれるため、表示値が272K未満になる場合がある。
+# 下記はmodel_context_window（config.tomlで指定する実効window）の値。
 model_context_window = 872000
 # 応答スタイル。Routerの判断と結果統合を簡潔・実務的にする。
 # 未指定時: personalityなし（組み込みのCodex指示を使用）。
