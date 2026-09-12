@@ -28,6 +28,8 @@ window拡張だけでは、Leafのraw outputをRootへ返すことで効果が�
 
 Metricsが設定を自動変更すると、原因と結果の切り分けが難しくなります。rollout JSONLを読み、変更前後のtoken、完遂率、昇格率、context使用量を比較してから人間が変更を決めます。
 
+wait/status pollingのtimeoutを20分/25分へ変更した理由と評価指標は[`WAIT-POLLING.md`](WAIT-POLLING.md)に分離して記録しています。
+
 ## 変更時の評価
 
 設計変更では、変更理由だけでなく、token cost、完遂率、latency、context使用量への影響とrollback条件を記録します。新しいbest practiceを採用する場合も、既存構成の不変条件を確認してからSmoke TestとMetricsで評価します。
