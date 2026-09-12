@@ -4,8 +4,9 @@ model = "gpt-5.6-luna"
 # Rootの推論 effort。Rootを薄いRouterとして保ち、固定コストを抑える。
 # 未指定時: 選択modelのcatalog default（Lunaのcatalog defaultはmedium）。
 model_reasoning_effort = "medium"
-# 利用可能なcontext windowの上限。auto-compact閾値は別途global設定しない。
-# 未指定時: Luna/Terra/Solのcatalog context_windowは272000 tokens、max_context_windowは872000（CLI 0.154.0で確認）。
+# 利用可能なcontext windowを明示的に872000 tokensへ広げるoverride。
+# 未指定時のcatalog context_window: 272000 tokens（272K）。max_context_window: 872000 tokens（872K）。
+# 画面や実効入力領域ではsystem/tool出力用のheadroomが差し引かれるため、表示値が272K未満になる場合がある。
 model_context_window = 872000
 # 応答スタイル。Routerの判断と結果統合を簡潔・実務的にする。
 # 未指定時: personalityなし（組み込みのCodex指示を使用）。
