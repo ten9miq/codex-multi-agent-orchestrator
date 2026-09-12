@@ -36,6 +36,25 @@ Luna Medium Root
   └─ CONTROLLER_ASTRA  最難関・高リスク
 ```
 
+```mermaid
+flowchart TD
+    U["User"] --> R["Luna Medium Root Router<br/>gpt-5.6-luna / medium / V2"]
+
+    R -->|"極小・明白"| D["DIRECT_LUNA<br/>Luna Medium"]
+    R -->|"read-heavy探索"| S["SCOUT_LUNA<br/>Luna Scout / Leaf"]
+    R -->|"通常実装"| W["WORKER_TERRA<br/>Terra High / Leaf"]
+    R -->|"複雑"| C["CONTROLLER_SOL<br/>Sol Medium"]
+    R -->|"最難関・高リスク"| A["CONTROLLER_ASTRA<br/>Astra High"]
+
+    C --> CS["Luna Scout / Leaf"]
+    C --> CW["Terra Worker / Leaf"]
+    C --> CE["Sol Expert / Leaf"]
+
+    A --> AS["Luna Scout / Leaf"]
+    A --> AW["Terra Worker / Leaf"]
+    A --> AE["Sol Expert / Leaf"]
+```
+
 Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装にTerra Controllerは置かず、`Luna → Terra High Worker`で直接処理します。LeafはScout、Terra Worker、Sol Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
 
 ## Contextと結果の扱い
