@@ -1,0 +1,43 @@
+model = "gpt-5.6-luna"
+model_reasoning_effort = "medium"
+model_context_window = 872000
+personality = "pragmatic"
+service_tier = "default"
+
+[features]
+multi_agent = true
+js_repl = false
+terminal_resize_reflow = true
+memories = true
+
+[features.multi_agent_v2]
+enabled = true
+max_concurrent_threads_per_session = 4
+min_wait_timeout_ms = 1200000
+default_wait_timeout_ms = 1200000
+max_wait_timeout_ms = 1500000
+
+[agents]
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "medium"
+max_depth = 2
+
+[agents.scout]
+description = "read-heavyなrepository探索を担当し、ファイルを変更せず簡潔な証拠を返すScout。"
+config_file = "agents/scout.toml"
+
+[agents.worker_terra]
+description = "通常の明確にscopeされた実装を担当する主要Worker。"
+config_file = "agents/worker-terra.toml"
+
+[agents.controller_sol]
+description = "非自明なdebug、複数module、設計判断を統合するController。"
+config_file = "agents/controller-sol.toml"
+
+[agents.expert]
+description = "難しい局所分析、correctness、security、reviewを担当するHigh-effort specialist。"
+config_file = "agents/expert.toml"
+
+[agents.controller_astra]
+description = "最難関architecture、debug、高リスク作業を担当するfrontier Controller。"
+config_file = "agents/controller-astra.toml"

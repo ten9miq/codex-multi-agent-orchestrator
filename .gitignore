@@ -1,0 +1,13 @@
+config.toml
+auth.json
+sessions/
+archived_sessions/
+*.sqlite
+*.sqlite-*
+logs/
+browser/sessions/
+mcp-oauth-locks/
+metrics/state.json
+metrics/routing-metrics.jsonl
+__pycache__/
+*.pyc
