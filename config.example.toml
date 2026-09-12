@@ -37,15 +37,15 @@ enabled = true
 max_concurrent_threads_per_session = 4
 # wait系処理の最小timeout。短すぎるpollingによる無駄な再試行を避ける。
 # 未指定時: 10000 ms（10秒）。
-# 設定値: 1200000 ms = 20分 = 0.333時間。
+# 設定値: 1200000 ms = 20分。
 min_wait_timeout_ms = 1200000
 # wait系処理の標準timeout。
 # 未指定時: 30000 ms（30秒）。
-# 設定値: 1200000 ms = 20分 = 0.333時間。
+# 設定値: 1200000 ms = 20分。
 default_wait_timeout_ms = 1200000
 # wait系処理で許可する最大timeout。
 # 未指定時: 3600000 ms（60分）。
-# 設定値: 1500000 ms = 25分 = 0.417時間。
+# 設定値: 1500000 ms = 25分。
 max_wait_timeout_ms = 1500000
 
 [agents]
