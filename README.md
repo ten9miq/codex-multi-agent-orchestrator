@@ -12,7 +12,13 @@ Codex Multi-Agent V2 の公開可能な設定、agent role、Metricsを管理す
 \scripts\install.ps1
 ```
 
-既存の `config.toml` は日時付きバックアップを作成してから置き換えます。
+既存の `config.toml` は日時付きバックアップを作成し、公開テンプレートが管理するキー・sectionだけを更新します。`notify`、MCP、trusted projectなど、管理対象外の既存設定は保持します。
+
+適用前に確認する場合:
+
+```powershell
+.\scripts\install.ps1 -WhatIf
+```
 個人パス、MCP接続、通知コマンド、trusted project、session、認証情報は公開設定から除外しています。
 
 ## 含まれるもの
