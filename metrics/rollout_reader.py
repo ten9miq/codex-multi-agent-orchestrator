@@ -475,6 +475,8 @@ class Turn:
     route: str = "UNKNOWN"
     initial_route: str = "UNKNOWN"
     final_route: str = "UNKNOWN"
+    # final_route の後方互換 alias。レポートでは「実効 Route」として表示する。
+    effective_route: str = "UNKNOWN"
     model: str = ""
     reasoning_effort: str = ""
     multi_agent_version: str = ""
@@ -565,6 +567,7 @@ class Turn:
             self.verification = self._verify_events[-1]
         if self._retry_values:
             self.retry_count = max(self._retry_values)
+        self.effective_route = self.final_route
         self.subagent_count = sum(name == "spawn_agent" for name in self._tool_names)
         self.wait_tool_calls = sum(name in WAIT_TOOLS for name in self._tool_names)
         substantive = [name for name in self._tool_names if name not in WAIT_TOOLS]

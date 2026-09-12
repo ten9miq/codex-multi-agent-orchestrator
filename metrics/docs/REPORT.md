@@ -21,10 +21,13 @@ python "$env:USERPROFILE\.codex\metrics\report.py" --days 7
 |---|---|
 | 冒頭 | `Rootタスク数` は Root 行数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
 | 初期ルート | Root の `initial_route` 分布。Root がなければその旨を表示。 |
-| 品質 | `完了率` は Root の `status=COMPLETE`、`初回完遂率` は `first_pass_success`、`即時手戻り候補率` は heuristic の `possible_immediate_rework`、`検証失敗率` は `verification=FAIL` の比率。即時手戻りは確定値ではない。 |
+| Route別 品質・task使用量 | 初期Routeごとの件数、完了率、初回完遂率、即時手戻り候補率、Rootと帰属subagentを合算した平均/P90 token、weight設定時の平均weighted cost。 |
+| 品質 / 検証結果 | `完了率` は Root の `status=COMPLETE`、`初回完遂率` は `first_pass_success`、`即時手戻り候補率` は heuristic の `possible_immediate_rework`、`検証失敗率` は `verification=FAIL` の比率。検証結果は `PASS` / `FAIL` / `NOT_RUN` / `UNKNOWN` を欠損と区別して表示する。即時手戻りは確定値ではない。 |
 | Agent返却結果サイズ | assistant 結果と `USER_RESULT` の推定 token（文字数÷4）の平均・中央値・P90・最大。`USER_RESULT` がない既存 rollout は0。 |
-| 昇格 | `Terra → Sol` は初期 Route が `WORKER_TERRA` の Root のうち `escalation_count >= 1`、`Sol → Astra` は初期 Route が `CONTROLLER_SOL` の Root のうち `final_route=CONTROLLER_ASTRA`。分子/分母も表示。 |
+| 昇格 | `Terra → Sol` は初期 Route が `WORKER_TERRA` の Root のうち `escalation_count >= 1`、`Sol → Astra` は初期 Route が `CONTROLLER_SOL` の Root のうち `effective_route=CONTROLLER_ASTRA`。全Rootの昇格率と `initial_route → effective_route` の遷移件数も表示する。 |
 | モデル別使用量 | 実効 model ごとの turn 数、input、cached input、output、reasoning、total token。total の多い順。 |
+| Auto Review | `codex-auto-review` のturn、token内訳、cached比率、全tokenに占める比率、weight設定時のcostを通常のRouting taskと分けて表示する。 |
+| Context peak | turnごとの `last_token_usage` から得たcontext peakをmodel別に表示する。累積input tokenやtask total tokenとは別指標。 |
 | タスク単位token分布 | `(root_thread_id, root_turn_id)` ごとに Root と帰属 subagent の total token を合算し、平均・中央値・P90を表示。 |
 | Coordination / 待機 | `キャッシュ入力比率` は cached input / input、`wait/status系tool call` は call 数、`status-only token` はその token と全 total に占める割合。 |
 | 重み付きコスト | 設定済みなら全 turn の合計とタスク平均、使用した設定パス。未設定なら無効と表示。 |

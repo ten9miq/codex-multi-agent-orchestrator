@@ -10,7 +10,7 @@ from pathlib import Path
 
 from rollout_reader import Turn, parse_rollout_turns, parse_ts
 
-VERSION = 2
+VERSION = 3
 
 
 def attach_root_tasks(turns: list[Turn]) -> None:

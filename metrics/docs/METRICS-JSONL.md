@@ -10,9 +10,11 @@
 | `turn_id` | turn ID |
 | `is_root` | Root か |
 | `agent_role` | `scout` / `worker_terra` 等の role |
-| `route` / `initial_route` / `final_route` | 最終 Route / 最初の Route / 最終 Route |
+| `route` / `initial_route` / `final_route` / `effective_route` | 互換用の最終 Route / 最初の Route / 最終 Route / レポートで用いる実効 Route。`effective_route` は `final_route` の後方互換 alias。 |
 | `model` / `reasoning_effort` / `multi_agent_version` | 実効 model、effort、V1/V2 |
 | `input_tokens` / `cached_input_tokens` / `output_tokens` / `reasoning_tokens` / `total_tokens` | turn の token 内訳 |
+| `context_window` / `context_tokens` / `context_peak_tokens` | `last_token_usage` から得た実効context window、現在値、turn内peak。累積tokenではない。 |
+| `context_usage_pct` / `context_peak_usage_pct` | context windowに対する現在値・peakの使用率（不明は `null`） |
 | `status` / `verification` | `COMPLETE` 等の状態、`PASS` / `FAIL` / `NOT_RUN` 等の検証結果 |
 | `escalation_count` / `retry_count` / `subagent_count` | 昇格、retry、spawn した subagent の回数 |
 | `duration_seconds` | turn 時間 |

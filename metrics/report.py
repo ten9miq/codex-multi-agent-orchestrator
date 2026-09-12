@@ -98,6 +98,29 @@ def weighted_cost(row: dict[str, Any], weights: dict[str, dict[str, float]]) -> 
     ) / 1_000_000
 
 
+def route_value(row: dict[str, Any], field: str) -> str:
+    value = row.get(field)
+    return value if isinstance(value, str) and value else "UNKNOWN"
+
+
+def effective_route(row: dict[str, Any]) -> str:
+    """新旧Metricsの実効Routeを互換的に読む。"""
+    for field in ("effective_route", "final_route", "route"):
+        value = route_value(row, field)
+        if value != "UNKNOWN":
+            return value
+    return "UNKNOWN"
+
+
+def verification_value(row: dict[str, Any]) -> str:
+    value = route_value(row, "verification").upper()
+    return value if value in {"PASS", "FAIL", "NOT_RUN"} else "UNKNOWN"
+
+
+def mean_or_dash(values: list[float]) -> str:
+    return "-" if not values else f"{statistics.mean(values):.4f}"
+
+
 def build_parser() -> argparse.ArgumentParser:
     default_metrics = Path.home() / ".codex" / "metrics"
     parser = argparse.ArgumentParser(
@@ -173,7 +196,25 @@ def main() -> int:
         print("\n対象期間にMetricsがありません。")
         return 0
 
-    routes = Counter(row.get("initial_route", "UNKNOWN") for row in roots)
+    task_groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        root_thread = row.get("root_thread_id") or (row.get("thread_id") if row.get("is_root") else None)
+        root_turn = row.get("root_turn_id") or (row.get("turn_id") if row.get("is_root") else None)
+        if root_thread and root_turn:
+            task_groups[(str(root_thread), str(root_turn))].append(row)
+
+    task_summaries: list[dict[str, Any]] = []
+    for root in roots:
+        key = (str(root.get("root_thread_id") or root.get("thread_id") or ""), str(root.get("root_turn_id") or root.get("turn_id") or ""))
+        group = task_groups.get(key, [root])
+        costs = [weighted_cost(item, weights) for item in group]
+        task_summaries.append({
+            "root": root,
+            "total_tokens": sum(int(item.get("total_tokens", 0) or 0) for item in group),
+            "cost": sum(value for value in costs if value is not None) if any(value is not None for value in costs) else None,
+        })
+
+    routes = Counter(route_value(row, "initial_route") for row in roots)
     print("\n■ 初期ルート")
     if routes:
         for route, count in routes.most_common():
@@ -184,7 +225,7 @@ def main() -> int:
     completed = sum(row.get("status") == "COMPLETE" for row in roots)
     first = sum(bool(row.get("first_pass_success")) for row in roots)
     rework = sum(bool(row.get("possible_immediate_rework")) for row in roots)
-    verify_fail = sum(row.get("verification") == "FAIL" for row in roots)
+    verify_fail = sum(verification_value(row) == "FAIL" for row in roots)
 
     print("\n■ 品質")
     print(f"  完了率                       {fmt_pct(pct(completed, len(roots))):>10}")
@@ -192,6 +233,45 @@ def main() -> int:
     print(f"  即時手戻り候補率             {fmt_pct(pct(rework, len(roots))):>10}")
     print(f"  検証失敗率                   {fmt_pct(pct(verify_fail, len(roots))):>10}")
     print("  ※ 即時手戻りはheuristic判定で、確定値ではありません。")
+
+    print("\n■ Route別 品質・task使用量（Root + 帰属subagent）")
+    by_route: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for task in task_summaries:
+        by_route[route_value(task["root"], "initial_route")].append(task)
+    route_rows: list[list[str]] = []
+    for route, tasks in sorted(by_route.items(), key=lambda item: (-len(item[1]), item[0])):
+        roots_for_route = [task["root"] for task in tasks]
+        costs = [float(task["cost"]) for task in tasks if task["cost"] is not None]
+        totals = [int(task["total_tokens"]) for task in tasks]
+        route_rows.append([
+            route,
+            fmt_i(len(tasks)),
+            fmt_pct(pct(sum(root.get("status") == "COMPLETE" for root in roots_for_route), len(tasks))),
+            fmt_pct(pct(sum(bool(root.get("first_pass_success")) for root in roots_for_route), len(tasks))),
+            fmt_pct(pct(sum(bool(root.get("possible_immediate_rework")) for root in roots_for_route), len(tasks))),
+            fmt_i(statistics.mean(totals) if totals else 0),
+            fmt_i(p90(totals)),
+            mean_or_dash(costs),
+        ])
+    if route_rows:
+        print("\n".join(render_table(
+            ["初期Route", "件数", "完了", "初回", "手戻り", "平均token", "P90", "平均cost"],
+            route_rows,
+            right_columns={1, 2, 3, 4, 5, 6, 7},
+        )))
+    else:
+        print("  Rootタスクなし")
+    print("  ※ costはweight未設定のtaskを除いた平均です。")
+
+    print("\n■ 検証結果（Root）")
+    verification_rows = []
+    verifications = Counter(verification_value(row) for row in roots)
+    for value in ("PASS", "FAIL", "NOT_RUN", "UNKNOWN"):
+        count = verifications[value]
+        verification_rows.append([value, fmt_i(count), fmt_pct(pct(count, len(roots)))])
+    print("\n".join(render_table(
+        ["verification", "件数", "割合"], verification_rows, right_columns={1, 2}
+    )))
 
     result_values = [int(row.get("result_estimated_tokens", 0) or 0) for row in rows]
     user_result_values = [int(row.get("user_result_estimated_tokens", 0) or 0) for row in rows]
@@ -205,10 +285,11 @@ def main() -> int:
     print("\n".join(render_table(["項目", "平均", "中央値", "P90", "最大"], result_rows, right_columns={1, 2, 3, 4})))
     print("  ※ USER_RESULTがない既存rolloutは0として扱います。")
 
-    terra = [row for row in roots if row.get("initial_route") == "WORKER_TERRA"]
-    sol = [row for row in roots if row.get("initial_route") == "CONTROLLER_SOL"]
+    terra = [row for row in roots if route_value(row, "initial_route") == "WORKER_TERRA"]
+    sol = [row for row in roots if route_value(row, "initial_route") == "CONTROLLER_SOL"]
     terra_sol = sum((row.get("escalation_count", 0) or 0) >= 1 for row in terra)
-    sol_astra = sum(row.get("final_route") == "CONTROLLER_ASTRA" for row in sol)
+    sol_astra = sum(effective_route(row) == "CONTROLLER_ASTRA" for row in sol)
+    escalated = sum((row.get("escalation_count", 0) or 0) >= 1 for row in roots)
 
     print("\n■ 昇格")
     print(
@@ -219,6 +300,22 @@ def main() -> int:
         f"  Sol → Astra                  {fmt_pct(pct(sol_astra, len(sol))):>10}"
         f"  ({sol_astra}/{len(sol)})"
     )
+    print(
+        f"  全Rootで昇格あり             {fmt_pct(pct(escalated, len(roots))):>10}"
+        f"  ({escalated}/{len(roots)})"
+    )
+    transitions = Counter(
+        (route_value(row, "initial_route"), effective_route(row))
+        for row in roots
+    )
+    print("\n  initial_route → effective_route")
+    transition_rows = [
+        [initial, effective, fmt_i(count)]
+        for (initial, effective), count in sorted(transitions.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    print("\n".join(render_table(
+        ["initial_route", "effective_route", "件数"], transition_rows, right_columns={2}
+    )))
 
     by_model = defaultdict(
         lambda: {
@@ -264,12 +361,80 @@ def main() -> int:
         right_columns={1, 2, 3, 4, 5, 6},
     )))
 
-    task_groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    auto_review_rows = [
+        row for row in rows
+        if str(row.get("model") or "").lower().startswith("codex-auto-review")
+    ]
+    print("\n■ Auto Review（通常のRouting taskとは別枠）")
+    if auto_review_rows:
+        auto_input = sum(int(row.get("input_tokens", 0) or 0) for row in auto_review_rows)
+        auto_cached = sum(int(row.get("cached_input_tokens", 0) or 0) for row in auto_review_rows)
+        auto_output = sum(int(row.get("output_tokens", 0) or 0) for row in auto_review_rows)
+        auto_reasoning = sum(int(row.get("reasoning_tokens", 0) or 0) for row in auto_review_rows)
+        auto_total = sum(int(row.get("total_tokens", 0) or 0) for row in auto_review_rows)
+        all_total = sum(int(row.get("total_tokens", 0) or 0) for row in rows)
+        auto_costs = [weighted_cost(row, weights) for row in auto_review_rows]
+        auto_costs = [cost for cost in auto_costs if cost is not None]
+        print(f"  turn                         {fmt_i(len(auto_review_rows)):>12}")
+        print(f"  total token                  {fmt_i(auto_total):>12}")
+        print(f"  input / cached / uncached    {fmt_i(auto_input)} / {fmt_i(auto_cached)} / {fmt_i(max(0, auto_input - auto_cached))}")
+        print(f"  output / reasoning           {fmt_i(auto_output)} / {fmt_i(auto_reasoning)}")
+        print(f"  cached input比率             {fmt_pct(pct(auto_cached, auto_input)):>12}")
+        print(f"  全total tokenに占める比率    {fmt_pct(pct(auto_total, all_total)):>12}")
+        if auto_costs:
+            print(f"  weighted cost                {sum(auto_costs):>12.4f}")
+        else:
+            print("  weighted cost                - (model weight未設定)")
+    else:
+        print("  対象turnなし")
+
+    context_by_model: dict[str, list[tuple[int, int | None, float | None]]] = defaultdict(list)
     for row in rows:
-        root_thread = row.get("root_thread_id") or (row.get("thread_id") if row.get("is_root") else None)
-        root_turn = row.get("root_turn_id") or (row.get("turn_id") if row.get("is_root") else None)
-        if root_thread and root_turn:
-            task_groups[(root_thread, root_turn)].append(row)
+        peak = row.get("context_peak_tokens")
+        if isinstance(peak, bool):
+            continue
+        try:
+            peak_value = int(peak)
+        except (TypeError, ValueError):
+            continue
+        window = row.get("context_window")
+        try:
+            window_value = int(window) if window is not None else None
+        except (TypeError, ValueError):
+            window_value = None
+        usage = row.get("context_peak_usage_pct")
+        try:
+            usage_value = float(usage) if usage is not None else None
+        except (TypeError, ValueError):
+            usage_value = None
+        if usage_value is None and window_value and window_value > 0:
+            usage_value = peak_value * 100.0 / window_value
+        context_by_model[route_value(row, "model")].append((peak_value, window_value, usage_value))
+
+    print("\n■ Context peak（turnごとのlast_token_usage由来。累積tokenではありません）")
+    context_rows: list[list[str]] = []
+    for model, values in sorted(context_by_model.items(), key=lambda item: (-len(item[1]), item[0])):
+        peaks = [item[0] for item in values]
+        windows = [item[1] for item in values if item[1] is not None and item[1] > 0]
+        usages = [item[2] for item in values if item[2] is not None]
+        context_rows.append([
+            model,
+            fmt_i(len(values)),
+            fmt_i(statistics.median(windows)) if windows else "-",
+            fmt_i(statistics.mean(peaks)),
+            fmt_i(p90(peaks)),
+            fmt_i(max(peaks)),
+            fmt_pct(statistics.mean(usages)) if usages else "-",
+            fmt_pct(p90(usages)) if usages else "-",
+        ])
+    if context_rows:
+        print("\n".join(render_table(
+            ["model", "観測turn", "window中央値", "peak平均", "peak P90", "peak最大", "peak使用率平均", "P90"],
+            context_rows,
+            right_columns={1, 2, 3, 4, 5, 6, 7},
+        )))
+    else:
+        print("  context snapshotを持つturnなし")
 
     task_totals = [
         sum(int(item.get("total_tokens", 0) or 0) for item in group)

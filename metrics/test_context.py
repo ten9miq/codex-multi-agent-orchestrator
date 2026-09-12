@@ -71,6 +71,7 @@ class ContextObservabilityTests(unittest.TestCase):
         self.assertEqual(turns[0].context_window, 1000)
         self.assertEqual(turns[0].context_peak_tokens, 300)
         self.assertEqual(turns[0].context_peak_usage_pct, 30.0)
+        self.assertEqual(turns[0].effective_route, turns[0].final_route)
         self.assertEqual(turns[0].public()["context_usage_pct"], 30.0)
         self.assertEqual(turns[0].cache_record()["context_peak_tokens"], 300)
 
