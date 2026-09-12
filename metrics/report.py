@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import statistics
+import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -39,6 +40,29 @@ def fmt_i(n: float | int) -> str:
 
 def fmt_pct(x: float) -> str:
     return f"{x:.1f}%"
+
+
+def display_width(value: str) -> int:
+    """端末上の表示幅。日本語など全角文字を2桁として扱う。"""
+    return sum(2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1 for char in value)
+
+
+def pad_cell(value: str, width: int, *, right: bool) -> str:
+    padding = max(0, width - display_width(value))
+    return (" " * padding + value) if right else (value + " " * padding)
+
+
+def render_table(headers: list[str], rows: list[list[str]], *, right_columns: set[int]) -> list[str]:
+    values = [headers, *rows]
+    widths = [max(display_width(row[index]) for row in values) for index in range(len(headers))]
+    output = []
+    for row in values:
+        cells = [
+            pad_cell(value, widths[index], right=index in right_columns)
+            for index, value in enumerate(row)
+        ]
+        output.append("  " + " ".join(cells))
+    return output
 
 
 def load_weights(path: Path) -> dict[str, dict[str, float]]:
@@ -173,15 +197,11 @@ def main() -> int:
     result_stats = distribution(result_values)
     user_result_stats = distribution(user_result_values)
     print("\n■ Agent返却結果サイズ（推定token、文字数÷4）")
-    print("  項目                         平均       中央値          P90          最大")
-    print(
-        f"  assistant結果               {result_stats[0]:>8,} {result_stats[1]:>12,}"
-        f" {result_stats[2]:>12,} {result_stats[3]:>12,}"
-    )
-    print(
-        f"  USER_RESULT                 {user_result_stats[0]:>8,} {user_result_stats[1]:>12,}"
-        f" {user_result_stats[2]:>12,} {user_result_stats[3]:>12,}"
-    )
+    result_rows = [
+        ["assistant結果", *(f"{value:,}" for value in result_stats)],
+        ["USER_RESULT", *(f"{value:,}" for value in user_result_stats)],
+    ]
+    print("\n".join(render_table(["項目", "平均", "中央値", "P90", "最大"], result_rows, right_columns={1, 2, 3, 4})))
     print("  ※ USER_RESULTがない既存rolloutは0として扱います。")
 
     terra = [row for row in roots if row.get("initial_route") == "WORKER_TERRA"]
@@ -226,16 +246,22 @@ def main() -> int:
             item[dst] += int(row.get(src, 0) or 0)
 
     print("\n■ モデル別使用量")
-    print(
-        f"  {'モデル':<22} {'turn':>6} {'入力':>13} {'キャッシュ':>13} "
-        f"{'出力':>11} {'推論':>11} {'合計':>13}"
-    )
+    model_rows: list[list[str]] = []
     for model, item in sorted(by_model.items(), key=lambda kv: kv[1]["total"], reverse=True):
-        print(
-            f"  {model:<22} {item['turns']:>6,} {fmt_i(item['input']):>13} "
-            f"{fmt_i(item['cached']):>13} {fmt_i(item['output']):>11} "
-            f"{fmt_i(item['reasoning']):>11} {fmt_i(item['total']):>13}"
-        )
+        model_rows.append([
+            model,
+            f"{item['turns']:,}",
+            fmt_i(item["input"]),
+            fmt_i(item["cached"]),
+            fmt_i(item["output"]),
+            fmt_i(item["reasoning"]),
+            fmt_i(item["total"]),
+        ])
+    print("\n".join(render_table(
+        ["モデル", "turn", "入力", "キャッシュ", "出力", "推論", "合計"],
+        model_rows,
+        right_columns={1, 2, 3, 4, 5, 6},
+    )))
 
     task_groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
