@@ -10,7 +10,8 @@ from pathlib import Path
 
 from rollout_reader import Turn, parse_rollout_turns, parse_ts
 
-VERSION = 3
+# 連続Root turnの手戻り分類を追加したため、旧cue cacheは再利用しない。
+VERSION = 6
 
 
 def attach_root_tasks(turns: list[Turn]) -> None:
@@ -61,7 +62,7 @@ def attach_root_tasks(turns: list[Turn]) -> None:
 
 
 def mark_rework(turns: list[Turn]) -> None:
-    """Root完了後30分以内の訂正らしい次turnを、即時手戻り候補として印を付ける。"""
+    """連続Root turnのcueを前turnへ転記し、旧heuristic互換の印も維持する。"""
     by_thread: dict[str, list[Turn]] = {}
     for turn in turns:
         if turn.is_root:
@@ -73,8 +74,16 @@ def mark_rework(turns: list[Turn]) -> None:
             end = parse_ts(current.timestamp)
             if not start or not end:
                 continue
-            if 0 <= (end - start).total_seconds() <= 30 * 60 and current.user_correction_cue:
+            if not 0 <= (end - start).total_seconds() <= 30 * 60:
+                continue
+            cue_class = current.user_rework_class
+            if cue_class == "NONE":
+                continue
+            previous.rework_class = cue_class
+            # 旧fieldは旧patternだけで決め、新しい分類による意味の変更を避ける。
+            if current.user_legacy_rework_cue:
                 previous.possible_immediate_rework = True
+            if cue_class in {"MODEL_CORRECTION", "UNKNOWN"}:
                 previous.first_pass_success = False
 
 

@@ -5,29 +5,51 @@
 ```powershell
 python "$env:USERPROFILE\.codex\metrics\report.py"
 python "$env:USERPROFILE\.codex\metrics\report.py" --days 7
+python "$env:USERPROFILE\.codex\metrics\report.py" --since "2026/09/01 00:00" --until "2026-09-08T00:00:00+09:00"
+
+# 同じ終了時刻を固定して24時間・7日を比較する例
+$Until = Get-Date
+python "$env:USERPROFILE\.codex\metrics\report.py" --since $Until.AddHours(-24).ToString("o") --until $Until.ToString("o")
+python "$env:USERPROFILE\.codex\metrics\report.py" --since $Until.AddDays(-7).ToString("o") --until $Until.ToString("o")
 ```
 
 | option | 内容 | 既定値 |
 |---|---|---|
 | `--input PATH` | Metrics JSONL | `~/.codex/metrics/routing-metrics.jsonl` |
 | `--days N` | 集計する直近日数（1以上） | `30` |
+| `--since DATETIME` | 開始日時（含む） | なし |
+| `--until DATETIME` | 終了日時（含まない） | なし |
 | `--weights PATH` | 重み付きコスト設定 JSON | `~/.codex/metrics/cost-weights.json` |
 
 入力がなければ `collect.py` の実行を案内します。壊れた JSONL 行は数だけ表示して、読めた行から集計します。
+
+`--since` / `--until` は ISO 8601、`YYYY/MM/DD HH:MM[:SS]`、または
+`YYYY-MM-DD HH:MM[:SS]` を受け付けます。offset付きの値はそのoffsetを保ち、
+offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正規化して比較します。
+範囲は常に `[since, until)`（開始を含み、終了を含まない）です。`--since` 単独は
+現在まで、`--until` 単独はその30日前からを集計します。`--days` は明示的な範囲指定と
+併用できません。レポート先頭の対象期間行で、実際に用いたUTCの範囲を確認できます。
+
+変更前後の比較では、`--days`を別々の時刻に実行する代わりに、上記のように同じ
+`--until` を固定し、各期間を明示してください。これにより24時間と7日の各レポートが
+再実行時にずれることを避けられます。
 
 ## 出力セクション
 
 | セクション | 項目の意味 |
 |---|---|
-| 冒頭 | `Rootタスク数` は Root 行数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
+| 冒頭 | `対象期間` はUTCに正規化した半開区間。`Root turn数` は Root 行数、`ユニークRoot thread/session数` は同じ会話内の複数turnを重複計上しない数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
 | 初期ルート | Root の `initial_route` 分布。Root がなければその旨を表示。 |
-| Route別 品質・task使用量 | 初期Routeごとの件数、完了率、初回完遂率、即時手戻り候補率、Rootと帰属subagentを合算した平均/P90 token、weight設定時の平均weighted cost。 |
-| 品質 / 検証結果 | `完了率` は Root の `status=COMPLETE`、`初回完遂率` は `first_pass_success`、`即時手戻り候補率` は heuristic の `possible_immediate_rework`、`検証失敗率` は `verification=FAIL` の比率。検証結果は `PASS` / `FAIL` / `NOT_RUN` / `UNKNOWN` を欠損と区別して表示する。即時手戻りは確定値ではない。 |
+| 実行モード | `ORCHESTRATED_ROUTE` と `LEGACY_ROOT_MODEL` を分ける。旧Metricsでfieldがなければ`UNKNOWN`であり、legacyと断定しない。 |
+| Route別 品質・task使用量 | 初期RouteごとのRoot turn数を分母に、完了率、初回完遂率、後方互換の手戻り候補率、追加要求・モデル訂正・不明のcue分類率、Rootと帰属subagentを合算した平均/P90 token、weight設定時の平均weighted costを表示する。 |
+| 品質 / 手戻り分類 / 検証結果 | `完了率` は Root の `status=COMPLETE`、`初回完遂率` は `first_pass_success`。`rework_class` は次Root turnのcueを `NONE` / `USER_FOLLOWUP` / `MODEL_CORRECTION` / `UNKNOWN` に分類し、Root turn別と会話内（Root thread/session）で表示する。`possible_immediate_rework` は旧heuristicとして併記する。検証結果は全Rootと初期Route別に `PASS` / `FAIL` / `NOT_RUN` / `UNKNOWN` を欠損と区別して表示する。 |
+| 完了状態・検証の観測範囲と出所 | `status_source`を`assistant_message`、`task_complete.last_agent_message`、通常完了の`completion_event`、`UNKNOWN`別に表示する。`verification_source`を持つRoot数をcoverageとして示し、`FAIL / coverage`の既知内FAIL率と`FAIL / 全Root turn`の全Root FAIL率を別表示する。完了eventは`verification`を補完せず、旧Metricsまたはprotocolなしは`UNKNOWN`である。 |
 | Agent返却結果サイズ | assistant 結果と `USER_RESULT` の推定 token（文字数÷4）の平均・中央値・P90・最大。`USER_RESULT` がない既存 rollout は0。 |
 | 昇格 | `Terra → Sol` は初期 Route が `WORKER_TERRA` の Root のうち `escalation_count >= 1`、`Sol → Astra` は初期 Route が `CONTROLLER_SOL` の Root のうち `effective_route=CONTROLLER_ASTRA`。全Rootの昇格率と `initial_route → effective_route` の遷移件数も表示する。 |
 | モデル別使用量 | 実効 model ごとの turn 数、input、cached input、output、reasoning、total token。total の多い順。 |
 | Auto Review | `codex-auto-review` のturn、token内訳、cached比率、全tokenに占める比率、weight設定時のcostを通常のRouting taskと分けて表示する。 |
 | Context peak | turnごとの `last_token_usage` から得たcontext peakをmodel別に表示する。累積input tokenやtask total tokenとは別指標。 |
+| Context window 分布 / Compaction | 実効window値ごとのturn数と、`compacted` event数・発生時に観測できたcontextを表示する。旧rolloutにevent/snapshotがなければcountは0、contextは`UNKNOWN`であり、compaction非発生とは断定しない。 |
 | タスク単位token分布 | `(root_thread_id, root_turn_id)` ごとに Root と帰属 subagent の total token を合算し、平均・中央値・P90を表示。 |
 | Coordination / 待機 | `キャッシュ入力比率` は cached input / input、`wait/status系tool call` は call 数、`status-only token` はその token と全 total に占める割合。 |
 | 重み付きコスト | 設定済みなら全 turn の合計とタスク平均、使用した設定パス。未設定なら無効と表示。 |

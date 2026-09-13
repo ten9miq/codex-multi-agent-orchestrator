@@ -40,10 +40,26 @@ KNOWN_TOOLS = WAIT_TOOLS | {
     "send_input",
     "resume_agent",
 }
-REWORK_CUES = re.compile(
+# 連続Root turnの関係を、次turnに入ったuser messageだけから控えめに分類する。
+# ``修正`` のように対象が曖昧な語は MODEL_CORRECTION と断定しない。
+MODEL_CORRECTION_CUES = re.compile(
+    r"(?:違(?:う|い)|間違|誤り|やり直|期待(?:と)?違|できていない|not what|wrong|incorrect|fix (?:it|this))",
+    re.IGNORECASE,
+)
+USER_FOLLOWUP_CUES = re.compile(
+    r"(?:追加(?:で|も|して|を)?|追記|さらに|ついでに|別件|もう一つ|also\b|add\b|plus\b|one more|in addition)",
+    re.IGNORECASE,
+)
+AMBIGUOUS_REWORK_CUES = re.compile(
+    r"(?:修正|直して|直せて|まだ|再度|もう一度|そうでは|ではなく|still\b|again\b|instead\b)",
+    re.IGNORECASE,
+)
+# 既存possible_immediate_reworkの意味を変えないための旧pattern。
+LEGACY_REWORK_CUES = re.compile(
     r"(?:違う|間違|修正|直して|直せて|まだ|再度|やり直|そうでは|ではなく|not what|wrong|fix it|still|again|instead)",
     re.IGNORECASE,
 )
+REWORK_CLASSES = {"NONE", "USER_FOLLOWUP", "MODEL_CORRECTION", "UNKNOWN"}
 PROTOCOL_STATUS_RE = re.compile(r"ROUTER_STATUS:\s*(COMPLETE|ESCALATE_SOL|ESCALATE_ASTRA|BLOCKED)")
 PROTOCOL_ROUTE_RE = re.compile(r"ROUTER_ROUTE:\s*([A-Z0-9_]+)")
 PROTOCOL_VERIFY_RE = re.compile(r"ROUTER_VERIFY:\s*(PASS|FAIL|NOT_RUN)")
@@ -52,6 +68,17 @@ USER_RESULT_RE = re.compile(
     r"USER_RESULT_BEGIN\s*(?P<body>.*?)\s*USER_RESULT_END",
     re.IGNORECASE | re.DOTALL,
 )
+
+
+def classify_user_rework_cue(text: str) -> str:
+    """次Root turnを始めるuser messageの関係を、明示cueだけで分類する。"""
+    if MODEL_CORRECTION_CUES.search(text):
+        return "MODEL_CORRECTION"
+    if USER_FOLLOWUP_CUES.search(text):
+        return "USER_FOLLOWUP"
+    if AMBIGUOUS_REWORK_CUES.search(text):
+        return "UNKNOWN"
+    return "NONE"
 
 
 @dataclass
@@ -239,6 +266,14 @@ def extract_tool_calls(obj: Any) -> list[tuple[str, str, dict[str, Any]]]:
     return output
 
 
+def is_wait_status_call(name: str, args: dict[str, Any]) -> bool:
+    """待機・状態確認だけの call を、旧新JSONLに共通する引数で判定する。"""
+    if name in {"wait_agent", "list_agents", "wait"}:
+        return True
+    # write_stdinは空入力ならprocess待機だが、文字送信は実作業にもなり得る。
+    return name == "write_stdin" and not bool(args.get("chars"))
+
+
 def user_text_from_line(obj: dict[str, Any]) -> str:
     for node in walk(obj):
         if not isinstance(node, dict) or node.get("role") != "user":
@@ -250,14 +285,39 @@ def user_text_from_line(obj: dict[str, Any]) -> str:
 
 
 def assistant_text_from_line(obj: dict[str, Any]) -> str:
-    """1行中のassistant message本文だけを返す。"""
+    """1行中のassistant message本文だけを返す。
+
+    rollout全体の文字列を再帰走査すると、tool引数・developer prompt・引用された
+    protocolまでassistant出力として誤認する。ここではassistant messageの
+    ``content``（または旧schemaの``text``）だけを読む。
+    """
     for node in walk(obj):
         if not isinstance(node, dict) or node.get("role") != "assistant":
             continue
-        text = all_strings(node)
+        content = node.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = [
+                item.get("text")
+                for item in content
+                if isinstance(item, dict) and isinstance(item.get("text"), str)
+            ]
+            text = "\n".join(parts)
+            if text:
+                return text
+        text = node.get("text")
+        if not isinstance(text, str):
+            continue
         if text:
             return text
     return ""
+
+
+def task_complete_message(payload: dict[str, Any]) -> str:
+    """task_completeが保持する最終agent出力を返す（旧JSONLでは空）。"""
+    text = payload.get("last_agent_message")
+    return text if isinstance(text, str) else ""
 
 
 def source_metadata(session_meta: dict[str, Any]) -> tuple[bool, str | None, str | None, str | None]:
@@ -480,6 +540,7 @@ class Turn:
     model: str = ""
     reasoning_effort: str = ""
     multi_agent_version: str = ""
+    execution_mode: str = "LEGACY_ROOT_MODEL"
     input_tokens: int = 0
     cached_input_tokens: int = 0
     output_tokens: int = 0
@@ -490,12 +551,21 @@ class Turn:
     context_peak_tokens: int | None = None
     context_usage_pct: float | None = None
     context_peak_usage_pct: float | None = None
+    compaction_count: int = 0
+    compaction_context_tokens: list[int] = field(default_factory=list)
+    compaction_context_windows: list[int] = field(default_factory=list)
     result_chars: int = 0
     user_result_chars: int = 0
     result_estimated_tokens: int = 0
     user_result_estimated_tokens: int = 0
     status: str = "UNKNOWN"
     verification: str = "UNKNOWN"
+    # protocol由来の値は、明示的な最終出力を読めた場合だけsourceを保存する。
+    # Route推定（agent_role/model/spawn_agent）も区別できるようにする。
+    status_source: str | None = None
+    verification_source: str | None = None
+    route_source: str | None = None
+    retry_source: str | None = None
     escalation_count: int = 0
     retry_count: int = 0
     subagent_count: int = 0
@@ -504,20 +574,69 @@ class Turn:
     status_only_turn: bool = False
     wait_status_tokens: int = 0
     possible_immediate_rework: bool = False
+    # 前turnからの関係。collect.pyが同一Root thread内の次turnのcueを転記する。
+    rework_class: str = "NONE"
     first_pass_success: bool = False
     protocol_route: str | None = None
-    user_correction_cue: bool = False
+    # 次turnのuser messageから抽出した内部用cue。raw textは保存しない。
+    user_rework_class: str = "NONE"
+    user_legacy_rework_cue: bool = False
     _tool_ids: set[str] = field(default_factory=set, repr=False)
     _tool_names: list[str] = field(default_factory=list, repr=False)
+    _tool_calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list, repr=False)
     _spawn_roles: list[str] = field(default_factory=list, repr=False)
-    _status_events: list[str] = field(default_factory=list, repr=False)
-    _verify_events: list[str] = field(default_factory=list, repr=False)
-    _retry_values: list[int] = field(default_factory=list, repr=False)
+    _last_assistant_message: tuple[str, str] | None = field(default=None, repr=False)
+    _completion_message: tuple[str, str] | None = field(default=None, repr=False)
+    _protocol_applied: bool = field(default=False, repr=False)
     _result_text_seen: set[str] = field(default_factory=set, repr=False)
 
     def add_usage(self, usage: dict[str, int]) -> None:
         for key in ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens", "total_tokens"):
             setattr(self, key, getattr(self, key) + usage[key])
+
+    def set_last_assistant_message(self, text: str) -> None:
+        """最後のassistant messageを、protocol候補として保持する。"""
+        if text:
+            self._last_assistant_message = (text, "assistant_message")
+
+    def set_completion_message(self, text: str) -> None:
+        """task_completeに記録された最終agent出力を優先候補として保持する。"""
+        if text:
+            self._completion_message = (text, "task_complete.last_agent_message")
+
+    def apply_final_protocol(self) -> None:
+        """終了時の明示出力だけからROUTER protocolを取り込む。
+
+        tool argumentsやprompt内のprotocol文字列はこの経路に入らない。completion
+        eventのlast_agent_messageがある場合は、直前assistant messageより優先する。
+        """
+        if self._protocol_applied:
+            return
+        self._protocol_applied = True
+        candidate = self._completion_message or self._last_assistant_message
+        if candidate is None:
+            return
+        text, source = candidate
+        statuses = PROTOCOL_STATUS_RE.findall(text)
+        verifications = PROTOCOL_VERIFY_RE.findall(text)
+        retries = PROTOCOL_RETRY_RE.findall(text)
+        routes = PROTOCOL_ROUTE_RE.findall(text)
+        if statuses:
+            self.status = statuses[-1]
+            self.status_source = source
+            self.escalation_count = max(
+                self.escalation_count,
+                sum(1 for status in statuses if status.startswith("ESCALATE_")),
+            )
+        if verifications:
+            self.verification = verifications[-1]
+            self.verification_source = source
+        if retries:
+            self.retry_count = max(int(value) for value in retries)
+            self.retry_source = source
+        if routes:
+            self.protocol_route = routes[-1]
+            self.route_source = source
 
     def finalize(self) -> None:
         # 文字数はUTF-8 tokenizerに依存しない安定した近似値として保存する。
@@ -527,6 +646,7 @@ class Turn:
         self.context_peak_usage_pct = usage_pct(self.context_peak_tokens, self.context_window)
         if self.agent_role in ROUTE_BY_ROLE:
             self.route = self.initial_route = self.final_route = ROUTE_BY_ROLE[self.agent_role]
+            self.route_source = "agent_role"
         elif self.is_root:
             routes = [ROUTE_BY_ROLE[r] for r in self._spawn_roles if r in ROUTE_BY_ROLE and r != "expert"]
             base = {
@@ -548,6 +668,9 @@ class Turn:
                     if ROUTE_RANK.get(route, 0) > ROUTE_RANK.get(base, 0)
                 ]
             self.route = self.final_route
+            self.route_source = "spawn_agent" if base == "DIRECT_LUNA" and routes else "model"
+            if routes and base != "DIRECT_LUNA":
+                self.route_source = "model_and_spawn_agent"
             escalation = 0
             best = ranks[0] if ranks else 0
             for rank in ranks[1:]:
@@ -555,23 +678,34 @@ class Turn:
                     escalation += 1
                     best = rank
             self.escalation_count = max(self.escalation_count, escalation)
-        if self._status_events:
-            self.status = self._status_events[-1]
-            self.escalation_count = max(
-                self.escalation_count,
-                sum(1 for status in self._status_events if status.startswith("ESCALATE_")),
-            )
-        elif self.end_timestamp:
+        self.apply_final_protocol()
+        # 明示protocolがなければ、終了時刻を伴う完了eventを通常完了として扱う。
+        # verificationは補完しないため、protocol由来の観測範囲は維持される。
+        if self.status == "UNKNOWN" and self.end_timestamp:
             self.status = "COMPLETE"
-        if self._verify_events:
-            self.verification = self._verify_events[-1]
-        if self._retry_values:
-            self.retry_count = max(self._retry_values)
+            self.status_source = "completion_event"
+        if self.protocol_route:
+            # protocolで明示されたRouteは推定routeより優先する。initial_routeは
+            # 開始時のroute推定を残し、昇格・遷移分析との互換性を維持する。
+            self.route = self.final_route = self.protocol_route
+        if self.agent_role in ROUTE_BY_ROLE or self.multi_agent_version or self.protocol_route:
+            self.execution_mode = "ORCHESTRATED_ROUTE"
         self.effective_route = self.final_route
         self.subagent_count = sum(name == "spawn_agent" for name in self._tool_names)
-        self.wait_tool_calls = sum(name in WAIT_TOOLS for name in self._tool_names)
-        substantive = [name for name in self._tool_names if name not in WAIT_TOOLS]
-        self.status_only_turn = bool(self._tool_names) and not substantive
+        self.wait_tool_calls = sum(
+            is_wait_status_call(name, args) for name, args in self._tool_calls
+        )
+        # completion_eventだけではagentの最終返却内容を観測したことにならない。
+        # 待機専用turnの既存分類は、明示protocolまたはUSER_RESULTだけで解除する。
+        has_final_result = bool(
+            self.user_result_chars
+            or self.status_source in {"assistant_message", "task_complete.last_agent_message"}
+        )
+        self.status_only_turn = (
+            bool(self._tool_names)
+            and all(is_wait_status_call(name, args) for name, args in self._tool_calls)
+            and not has_final_result
+        )
         self.wait_status_tokens = self.total_tokens if self.status_only_turn else 0
         if self.timestamp and self.end_timestamp:
             start, end = parse_ts(self.timestamp), parse_ts(self.end_timestamp)
@@ -588,13 +722,14 @@ class Turn:
     def public(self) -> dict[str, Any]:
         data = asdict(self)
         for key in list(data):
-            if key.startswith("_") or key == "user_correction_cue":
+            if key.startswith("_") or key in {"user_rework_class", "user_legacy_rework_cue"}:
                 data.pop(key, None)
         return data
 
     def cache_record(self) -> dict[str, Any]:
         data = self.public()
-        data["user_correction_cue"] = self.user_correction_cue
+        data["user_rework_class"] = self.user_rework_class
+        data["user_legacy_rework_cue"] = self.user_legacy_rework_cue
         return data
 
 
@@ -609,7 +744,8 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
     turns: list[Turn] = []
     current: Turn | None = None
     seen_usage_signatures: set[tuple[int, int, int, int, int]] = set()
-    pending_user_correction = False
+    pending_user_rework_class = "NONE"
+    pending_user_legacy_rework_cue = False
 
     for obj in iter_jsonl(path):
         typ = obj.get("type")
@@ -633,11 +769,15 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
 
         event = event_type(obj)
         user_text = user_text_from_line(obj)
-        if user_text and REWORK_CUES.search(user_text):
+        if user_text:
+            cue_class = classify_user_rework_cue(user_text)
+            legacy_cue = bool(LEGACY_REWORK_CUES.search(user_text))
             if current is None:
-                pending_user_correction = True
-            else:
-                current.user_correction_cue = True
+                pending_user_rework_class = cue_class
+                pending_user_legacy_rework_cue = pending_user_legacy_rework_cue or legacy_cue
+            elif cue_class != "NONE":
+                current.user_rework_class = cue_class
+                current.user_legacy_rework_cue = current.user_legacy_rework_cue or legacy_cue
 
         info = token_info(obj)
         if info is not None:
@@ -669,16 +809,28 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
                 model=latest_model,
                 reasoning_effort=latest_effort,
                 multi_agent_version=latest_mav,
-                user_correction_cue=pending_user_correction,
+                user_rework_class=pending_user_rework_class,
+                user_legacy_rework_cue=pending_user_legacy_rework_cue,
             )
             snapshot_window = nonnegative_int(first_key(payload, "model_context_window"))
             if snapshot_window is not None:
                 current.context_window = snapshot_window
-            pending_user_correction = False
+            pending_user_rework_class = "NONE"
+            pending_user_legacy_rework_cue = False
             continue
 
         if current is None:
             continue
+
+        # ``compacted`` はContextCompactionの完了を示す安定したrollout event。
+        # この直前までに観測できたlast_token_usageを発生時contextとして保存する。
+        # 古いrolloutにこのeventがなければ、回数は0・contextは空のままとする。
+        if event == "compacted":
+            current.compaction_count += 1
+            if current.context_tokens is not None:
+                current.compaction_context_tokens.append(current.context_tokens)
+            if current.context_window is not None:
+                current.compaction_context_windows.append(current.context_window)
 
         # 最終assistant出力のサイズを計測する。tool payloadやuser入力は除外し、
         # USER_RESULT契約がある場合はその範囲を別集計する。
@@ -686,6 +838,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
         if assistant_text and assistant_text not in current._result_text_seen:
             current._result_text_seen.add(assistant_text)
             current.result_chars += len(assistant_text)
+            current.set_last_assistant_message(assistant_text)
             match = USER_RESULT_RE.search(assistant_text)
             if match:
                 current.user_result_chars += len(match.group("body").strip())
@@ -705,23 +858,16 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
                 continue
             current._tool_ids.add(dedupe)
             current._tool_names.append(name)
+            current._tool_calls.append((name, args))
             if name == "spawn_agent":
                 agent_role = args.get("agent_type")
                 if isinstance(agent_role, str) and agent_role:
                     current._spawn_roles.append(agent_role)
 
-        text = all_strings(obj)
-        for match in PROTOCOL_STATUS_RE.finditer(text):
-            current._status_events.append(match.group(1))
-        for match in PROTOCOL_VERIFY_RE.finditer(text):
-            current._verify_events.append(match.group(1))
-        for match in PROTOCOL_RETRY_RE.finditer(text):
-            current._retry_values.append(int(match.group(1)))
-        match = PROTOCOL_ROUTE_RE.search(text)
-        if match:
-            current.protocol_route = match.group(1)
-
         if event in {"task_complete", "turn_complete"}:
+            # 新schemaのtask_completeは、assistant messageの複製を
+            # last_agent_messageとして保持する。存在すればこれを最終出力とする。
+            current.set_completion_message(task_complete_message(payload))
             current.end_timestamp = str(obj.get("timestamp") or first_key(payload, "timestamp") or "")
             current.finalize()
             turns.append(current)

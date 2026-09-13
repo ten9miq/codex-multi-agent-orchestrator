@@ -44,8 +44,10 @@ subagent rollout には fork 元の過去履歴・token 記録が含まれる場
 
 この設計により、一般的な全 token 値の合計より fork tree での過大集計を避けます。raw token は常に保存するため、重みを変更しても過去の Metrics を再計算できます。
 
-## 即時手戻り候補と返却サイズ
+## 即時手戻り分類と返却サイズ
 
-`possible_immediate_rework` は、Root 完了後30分以内の次 turn に `違う`、`修正`、`やり直し`、`ではなく`、`wrong`、`fix it`、`still`、`again` などの訂正らしい表現がある場合の候補です。追加依頼との完全な区別はできないため確定値ではありません。
+同一Root threadで前turn完了後30分以内に始まる次Root turnについて、次turn開始前のuser messageを前turnの`rework_class`へ転記します。値は `NONE`（cueなし）、`USER_FOLLOWUP`（明確な追加依頼）、`MODEL_CORRECTION`（明確な誤り訂正）、`UNKNOWN`（修正・再実行など対象を断定できないcue）です。raw user textはMetricsに保存しません。
+
+`possible_immediate_rework` は後方互換の旧heuristicです。新しい分類とは別に、従来のcue patternだけで値を維持します。そのため新規分類が`UNKNOWN`でも旧fieldがfalseとなる場合があります。いずれもcueに基づく観測であり、原因の確定値ではありません。
 
 assistant 返却本文と `USER_RESULT_BEGIN`〜`USER_RESULT_END` 内を文字数で測り、比較用に文字数÷4の `result_estimated_tokens` と `user_result_estimated_tokens` を保存します。既存 rollout や契約外の返却は0であり、この値だけで過去の返却が圧縮済みとは判定しません。

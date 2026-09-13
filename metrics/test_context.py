@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 import smoke
+from collect import mark_rework
 from rollout_reader import parse_rollout_turns, parse_session_summary
 
 
@@ -54,7 +55,65 @@ def rollout_values(*, include_context: bool = True) -> list[dict]:
     return values
 
 
+def assistant_message(text: str) -> dict:
+    return {
+        "type": "response_item",
+        "payload": {
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "output_text", "text": text}],
+        },
+    }
+
+
+def user_message(text: str) -> dict:
+    return {
+        "type": "response_item",
+        "payload": {
+            "type": "message",
+            "role": "user",
+            "content": [{"type": "input_text", "text": text}],
+        },
+    }
+
+
 class ContextObservabilityTests(unittest.TestCase):
+    def test_consecutive_root_turn_rework_classes_preserve_legacy_boolean(self) -> None:
+        cases = [
+            ("前の結果は違います。直してください。", "MODEL_CORRECTION", True),
+            ("追加でREADMEも更新してください。", "USER_FOLLOWUP", False),
+            ("もう一度確認してください。", "UNKNOWN", False),
+            ("ありがとうございました。", "NONE", False),
+        ]
+        for text, expected_class, expected_legacy in cases:
+            with self.subTest(text=text):
+                values = rollout_values(include_context=False)
+                values.extend([
+                    user_message(text),
+                    {
+                        "type": "event_msg",
+                        "timestamp": "2026-01-01T00:05:00Z",
+                        "payload": {"type": "task_started", "turn_id": "turn-b"},
+                    },
+                    {
+                        "type": "event_msg",
+                        "timestamp": "2026-01-01T00:05:01Z",
+                        "payload": {"type": "task_complete", "turn_id": "turn-b"},
+                    },
+                ])
+                with tempfile.TemporaryDirectory() as temp:
+                    path = Path(temp) / "rollout-rework.jsonl"
+                    write_rollout(path, values)
+                    turns = parse_rollout_turns(path)
+
+                self.assertEqual(len(turns), 2)
+                self.assertEqual(turns[1].user_rework_class, expected_class)
+                mark_rework(turns)
+                self.assertEqual(turns[0].rework_class, expected_class)
+                self.assertEqual(turns[0].possible_immediate_rework, expected_legacy)
+                self.assertIn("rework_class", turns[0].public())
+                self.assertNotIn("user_rework_class", turns[0].public())
+
     def test_effective_context_uses_last_token_snapshot_and_tracks_peak(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "rollout-context.jsonl"
@@ -94,6 +153,176 @@ class ContextObservabilityTests(unittest.TestCase):
         self.assertEqual(payload["warnings"], 0)
         self.assertEqual(len(payload["context_warnings"]), 1)
         self.assertIsNone(payload["sessions"][0]["context_tokens"])
+
+    def test_execution_mode_compaction_and_wait_status_classification(self) -> None:
+        values = rollout_values()
+        values.insert(4, {"type": "compacted", "payload": {}})
+        values.insert(5, {
+            "type": "response_item",
+            "payload": {
+                "type": "function_call",
+                "name": "write_stdin",
+                "arguments": '{"chars":"continue"}',
+            },
+        })
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-new.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.execution_mode, "ORCHESTRATED_ROUTE")
+        self.assertEqual(turn.compaction_count, 1)
+        self.assertEqual(turn.compaction_context_tokens, [120])
+        self.assertEqual(turn.compaction_context_windows, [1000])
+        self.assertFalse(turn.status_only_turn)
+        self.assertEqual(turn.wait_tool_calls, 0)
+
+    def test_wait_only_turn_is_status_only_for_legacy_and_new_schema(self) -> None:
+        values = rollout_values()
+        values[1]["payload"].pop("multi_agent_version")
+        values.insert(4, {
+            "type": "response_item",
+            "payload": {"type": "function_call", "name": "wait_agent", "arguments": "{}"},
+        })
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-legacy.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.execution_mode, "LEGACY_ROOT_MODEL")
+        self.assertTrue(turn.status_only_turn)
+        self.assertEqual(turn.wait_tool_calls, 1)
+        self.assertEqual(turn.wait_status_tokens, turn.total_tokens)
+
+    def test_protocol_uses_only_final_assistant_or_task_complete_output(self) -> None:
+        values = rollout_values(include_context=False)
+        # tool引数とuser messageの文字列は、従来のall_strings走査なら誤採用した。
+        values.insert(3, {
+            "type": "response_item",
+            "payload": {
+                "type": "function_call",
+                "name": "send_message",
+                "arguments": (
+                    '{"prompt":"ROUTER_STATUS: COMPLETE\\nROUTER_VERIFY: PASS\\n'
+                    'ROUTER_ROUTE: CONTROLLER_ASTRA\\nROUTER_RETRY: 9"}'
+                ),
+            },
+        })
+        values.insert(4, {
+            "type": "response_item",
+            "payload": {
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": "ROUTER_VERIFY: PASS"}],
+            },
+        })
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-protocol-no-output.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.status, "COMPLETE")
+        self.assertEqual(turn.verification, "UNKNOWN")
+        self.assertEqual(turn.retry_count, 0)
+        self.assertEqual(turn.status_source, "completion_event")
+        self.assertIsNone(turn.verification_source)
+        self.assertEqual(turn.final_route, "DIRECT_LUNA")
+        self.assertEqual(turn.route_source, "model")
+
+    def test_protocol_provenance_prefers_task_complete_last_agent_message(self) -> None:
+        values = rollout_values(include_context=False)
+        values.insert(3, assistant_message(
+            "ROUTER_STATUS: BLOCKED\nROUTER_VERIFY: FAIL\n"
+            "ROUTER_ROUTE: WORKER_TERRA\nROUTER_RETRY: 2"
+        ))
+        values[-1]["payload"]["last_agent_message"] = (
+            "ROUTER_STATUS: COMPLETE\nROUTER_VERIFY: NOT_RUN\n"
+            "ROUTER_ROUTE: SCOUT_LUNA\nROUTER_RETRY: 1"
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-protocol-complete.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.status, "COMPLETE")
+        self.assertEqual(turn.verification, "NOT_RUN")
+        self.assertEqual(turn.retry_count, 1)
+        self.assertEqual(turn.final_route, "SCOUT_LUNA")
+        self.assertEqual(turn.status_source, "task_complete.last_agent_message")
+        self.assertEqual(turn.verification_source, "task_complete.last_agent_message")
+        self.assertEqual(turn.retry_source, "task_complete.last_agent_message")
+        self.assertEqual(turn.route_source, "task_complete.last_agent_message")
+
+    def test_protocol_can_use_last_assistant_message_without_completion_event(self) -> None:
+        values = rollout_values(include_context=False)
+        values.pop()
+        values.append(assistant_message(
+            "ROUTER_STATUS: BLOCKED\nROUTER_VERIFY: FAIL\n"
+            "ROUTER_ROUTE: CONTROLLER_SOL\nROUTER_RETRY: 3"
+        ))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-protocol-assistant.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.status, "BLOCKED")
+        self.assertEqual(turn.verification, "FAIL")
+        self.assertEqual(turn.final_route, "CONTROLLER_SOL")
+        self.assertEqual(turn.retry_count, 3)
+        self.assertEqual(turn.status_source, "assistant_message")
+        self.assertEqual(turn.verification_source, "assistant_message")
+        self.assertEqual(turn.route_source, "assistant_message")
+        self.assertEqual(turn.retry_source, "assistant_message")
+
+    def test_completion_event_fallback_does_not_override_protocol_status(self) -> None:
+        for status in ("BLOCKED", "ESCALATE_SOL"):
+            with self.subTest(status=status):
+                values = rollout_values(include_context=False)
+                values.insert(3, assistant_message(f"ROUTER_STATUS: {status}"))
+                with tempfile.TemporaryDirectory() as temp:
+                    path = Path(temp) / f"rollout-protocol-{status.lower()}.jsonl"
+                    write_rollout(path, values)
+                    turn = parse_rollout_turns(path)[0]
+
+                self.assertEqual(turn.status, status)
+                self.assertEqual(turn.status_source, "assistant_message")
+
+    def test_incomplete_turn_without_protocol_remains_unknown(self) -> None:
+        values = rollout_values(include_context=False)
+        values.pop()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-incomplete.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.status, "UNKNOWN")
+        self.assertIsNone(turn.status_source)
+
+    def test_completion_without_timestamp_does_not_get_fallback_status(self) -> None:
+        values = rollout_values(include_context=False)
+        values[-1].pop("timestamp")
+        values[-1]["payload"]["last_agent_message"] = "ROUTER_STATUS: BLOCKED"
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-completion-no-timestamp.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.status, "BLOCKED")
+        self.assertEqual(turn.status_source, "task_complete.last_agent_message")
+
+    def test_scout_not_run_requires_explicit_protocol(self) -> None:
+        values = rollout_values(include_context=False)
+        values[0]["payload"]["source"] = {
+            "subagent": {"parent_thread_id": "root-a"},
+            "agent_role": "scout",
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-scout-no-protocol.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.verification, "UNKNOWN")
+        self.assertIsNone(turn.verification_source)
 
 
 if __name__ == "__main__":
