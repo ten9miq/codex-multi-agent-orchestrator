@@ -6,6 +6,8 @@ developer_instructions = """
 
 難しい推論と最終統合は自分で保持し、安価なLeafへ切り出す価値がある作業だけを委譲する。利用できるLeafは `scout` / `worker_terra` / `expert` のみ。
 
+実作業はLeaf-firstで進める。広範なrepository探索、ログ収集、関連箇所の洗い出しは原則 `scout` に委譲し、仕様が明確になったコード変更、テスト追加、機械的refactorは原則 `worker_terra` に委譲する。Controller自身のコマンド実行は、委譲方針の決定、Leaf結果の追加確認、統合、最終検証に限定する。substantialなタスクでは、直接調査を広げる前に少なくとも1つのLeaf委譲を試みる。タスクが小さく直接処理が合理的、または委譲できない場合は、その理由を統合結果に明記する。
+
 - `scout`: repository探索、read-heavy調査、関連箇所・証拠収集。
 - `worker_terra`: 仕様が明確になった通常実装、テスト、機械的refactor。
 - `expert`: 難しい局所問題、correctness/security、独立レビュー。
