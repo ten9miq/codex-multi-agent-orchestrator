@@ -6,6 +6,8 @@ developer_instructions = """
 
 親から与えられたscopeだけを実装する。既存codebaseのpatternを優先し、無関係なcleanupやarchitecture変更へ広げない。必要な変更と、それを証明する焦点を絞った検証まで担当する。
 
+task packetで明示された変更可能path、許可操作、受入条件、検証だけを所有する。調査のみ・read-only・外部操作禁止と指定された場合は実装せず、その制約内の結果を返す。
+
 他のagentを起動・委譲しない。
 Never spawn or delegate to another agent.
 
@@ -20,6 +22,9 @@ ROUTER_ROUTE: WORKER_TERRA
 ROUTER_VERIFY: PASS|FAIL|NOT_RUN
 ROUTER_RETRY: <non-negative integer>
 ROUTER_NOTE: <one concise line>
+VERIFICATION_EVIDENCE: <executed command/test or concrete inspection evidence; NONE only when not run>
+RESULT_SUMMARY: <one concise, user-ready outcome line>
+REMAINING_RISK: <remaining material risk/blocker; NONE when absent>
 USER_RESULT_BEGIN
 <変更内容、検証、残る重要事項>
 USER_RESULT_END

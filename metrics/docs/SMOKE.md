@@ -161,6 +161,32 @@ RESULT: PASS
 
 追加 agent は期待していない token の原因として扱います。
 
+## 配線Smoke Testと自動Routing Testを混同しない
+
+上のSmoke Testは、promptで**指定した**role、model、effort、treeが実効化されるかを`smoke.py --expect`で確認する配線検証である。Rootが依頼内容から適切なrouteを選べること、またはtoken効率を証明するテストではない。
+
+自動Routing Testは、agent名を指定せず、固定した自然言語ケースを新規sessionで一件ずつ実行する運用評価である。開始時刻をケースごとに記録し、`collect.py`と`report.py`で実際の`initial_route`、完了、初回完遂、手戻り、token、subagent数を確認する。現在のMetricsは受動解析であり、期待routeとの突合や設定の自動変更は行わない。
+
+| ケース | promptの要旨 | 期待する最小route | 観測上の失敗 |
+|---|---|---|---|
+| Direct | 「この既知設定値を確認して」または明白な1箇所typo | `DIRECT_LUNA` | Worker/Controller起動はover-routing。未調査の設計判断はunder-routing。 |
+| Scout | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `SCOUT_LUNA` | 書込み・実装はoverreach。Directで根拠不足の結論はunder-routing。 |
+| Worker | 「この明白なbugを指定fileで修正し、対象testを通して」 | `WORKER_TERRA` | Directが設計判断や広い調査を抱えるのはunder-routing。Sol/Astraは根拠なきover-routing。 |
+| Sol | 「複数moduleで原因不明の回帰を診断し、選択肢を統合して修正して」 | `CONTROLLER_SOL` | Workerが未解消の複数module不確実性を推測で閉じるのはunder-routing。Astraは高risk根拠なしならover-routing。 |
+| Astra | 「security-sensitiveな破壊的migrationの設計判断を、失敗影響付きで検討して」 | `CONTROLLER_ASTRA` | Sol以下で重大riskを推測で処理するのはunder-routing。実際に低riskならAstraはover-routing。 |
+
+### 実施例
+
+```powershell
+$RoutingStart = Get-Date
+# Codexで、role名を含めない上表のケースを1件だけ実行する
+python "$env:USERPROFILE\.codex\metrics\collect.py"
+python "$env:USERPROFILE\.codex\metrics\report.py" `
+  --since $RoutingStart.ToString("o")
+```
+
+期待routeとの一致だけで合否を決めない。under-routingは、低tierで`FAIL`・再試行・昇格・モデル訂正らしい手戻りが増えること、または必要な検証が欠けることで確認する。over-routingは、より高tier/追加agentを使っても完了率・初回完遂率が改善せず、task token・待機・subagent数だけが増えることで確認する。比較では同種のケースを複数回実施し、同じ期間境界で前後のMetricsを読む。
+
 ## context と内部 session
 
 `--context` は `token_count.info.model_context_window` と `last_token_usage.total_tokens` から、実効window、最後の使用量、session内peak、各使用率を表示します。累積 `total_token_usage` はコスト計測用で context 使用率には使いません。欠損は model/effort/配線の PASS/FAIL を変えない非致命の警告です。`--json` の session 項目には `context_window`、`context_tokens`、`context_peak_tokens`、`context_usage_pct`、`context_peak_usage_pct`（不明は `null`）を常に含めます。

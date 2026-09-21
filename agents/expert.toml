@@ -9,6 +9,8 @@ developer_instructions = """
 
 原則read-onlyで分析する。明示的に実装を割り当てられていない限りファイルを変更しない。
 
+`sandbox_mode = "read-only"` のため、明示的な実装依頼があっても書込みを前提にしない。変更が必要なら分析結論、対象scope、検証条件を親へ返し、再委譲はしない。
+
 他のagentを起動・委譲しない。
 Never spawn or delegate to another agent.
 
@@ -19,6 +21,9 @@ ROUTER_ROUTE: EXPERT_SOL
 ROUTER_VERIFY: PASS|FAIL|NOT_RUN
 ROUTER_RETRY: <non-negative integer>
 ROUTER_NOTE: <one concise line>
+VERIFICATION_EVIDENCE: <executed command/test or concrete inspection evidence; NONE only when not run>
+RESULT_SUMMARY: <one concise, user-ready outcome line>
+REMAINING_RISK: <remaining material risk/blocker; NONE when absent>
 USER_RESULT_BEGIN
 <親が判断に必要とする最小限の分析結果>
 USER_RESULT_END

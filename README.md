@@ -63,18 +63,38 @@ flowchart TD
 
 Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装にTerra Controllerは置かず、`Luna → Terra High Worker`で直接処理します。LeafはScout、Terra Worker、Sol Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
 
+## Routing判定表
+
+Rootは依頼種別、変更scope、不確実性、複雑性、失敗リスク、必要な検証を順に確認し、最小で完遂可能なrouteを一つ選びます。単なる文章量、手順数、ファイル数では上位routeにしません。ユーザーのmodel/role指定と`read-only`・調査のみ等の制約は、利用可能性と安全性に矛盾しない限り優先します。
+
+| 依頼の状態 | Route | 例 | 選ばない条件 |
+|---|---|---|---|
+| 説明、既知設定の確認、単純操作、明白で可逆な極小修正 | `DIRECT_LUNA` | 1箇所のtypo、既知値の確認 | 実装方針、原因調査、複数箇所の整合が必要 |
+| 根拠収集・現在状態の調査だけ | `SCOUT_LUNA` | symbol、call path、関連test、文書の確認 | 書込み、修正、未依頼の設計変更が必要 |
+| scopeと受入条件が明確な変更 | `WORKER_TERRA` | bug fix、test追加、局所refactor | 広い設計判断、複数moduleの原因不明、重大なsecurity/correctness判断 |
+| 複数moduleの不確実性や設計判断を統合する必要がある | `CONTROLLER_SOL` | 非自明refactor、API移行、複数制約の統合 | 作業量だけが大きい、または狭く既知な実装 |
+| 高失敗コストで、Solでも重要な不確実性が残る | `CONTROLLER_ASTRA` | concurrency、distributed state、security-sensitive、破壊的migration | 予防的な高性能化、通常の調査・実装 |
+
+過少routingを避けるため、Directで未調査の根本原因や設計を推測しません。過剰routingを避けるため、既知の狭い作業を確認目的だけでWorker/Controllerへ送らず、Controllerも独立性・明確な所有範囲・待ち時間削減がある場合だけLeafへ委譲します。Workerは核心が広いarchitecture判断、複数moduleにまたがる曖昧なroot cause、重大なsecurity/correctness判断だと分かった場合だけSolへ、SolはAstraが必要な条件だけAstraへ昇格します。
+
 ## Contextと結果の扱い
 
 子agentには原則`fork_turns = "none"`を使い、Rootの長い履歴を複製しません。代わりに次のtask packetを渡します。
 
 ```text
-Original goal
-Assigned subtask
-Relevant files / evidence
-Constraints
+Objective
+Known facts / evidence
+Unknowns
+Scope
+Allowed
+Forbidden
 Acceptance criteria
-Expected response
+Verification
+Authorization
+Escalation
 ```
+
+`AGENTS.md`をrouting・delegation・出力契約のcanonical sourceとします。`agents/*.toml`はrole固有の実行境界と固定route/statusを定義し、判定規則を重複して別解釈しません。将来、下位directoryに別の`AGENTS.md`またはrole契約を追加する場合は、canonical sourceへの参照、優先順位、差分理由を同じ変更で文書化します。
 
 Root contextは全agentの作業履歴ではなく、routing stateとdistilled knowledgeを保持する場所です。ControllerはLeafのraw outputをそのままRootへ転送せず、必要な知識へ圧縮します。
 
@@ -117,7 +137,7 @@ python "$env:USERPROFILE\\.codex\\metrics\\smoke.py" `
   --table
 ```
 
-配線確認と、agent名を指定しない自然言語Routing確認は分けて実施してください。Astraは高コストのため、初回から常用しません。
+配線Smoke Testと、agent名を指定しない自動Routing Testは別の検証です。Smoke Testは指定したrole/model/階層が実効化されるかだけを確認し、判断品質を証明しません。自動Routing Testは固定のケース表に対するroute選択と、under-routing/over-routingの評価を確認します。Astraは高コストのため、初回から常用しません。ケースと手順は[`metrics/docs/SMOKE.md`](metrics/docs/SMOKE.md)を参照してください。
 
 ### Astraの配線Smoke Test
 

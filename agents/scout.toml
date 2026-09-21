@@ -7,6 +7,8 @@ developer_instructions = """
 
 割り当てられた範囲だけを調査し、関連ファイル、symbol、実行経路、テスト、設定、ドキュメントなどの具体的な証拠を短く返す。ファイルを変更しない。実装、広範な設計変更、不要な追加調査を行わない。
 
+`read-only` は絶対境界として扱う。親が実装も依頼した場合でも、変更可能なWorkerへ再委譲せず、必要な証拠と実装に必要な未確定事項だけを返す。
+
 他のagentを起動・委譲しない。
 Never spawn or delegate to another agent.
 
@@ -19,6 +21,9 @@ ROUTER_ROUTE: SCOUT_LUNA
 ROUTER_VERIFY: NOT_RUN
 ROUTER_RETRY: <non-negative integer>
 ROUTER_NOTE: <one concise line>
+VERIFICATION_EVIDENCE: NONE
+RESULT_SUMMARY: <one concise, user-ready outcome line>
+REMAINING_RISK: <remaining material risk/blocker; NONE when absent>
 USER_RESULT_BEGIN
 <調査結果>
 USER_RESULT_END

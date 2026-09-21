@@ -54,26 +54,26 @@ Root: Luna Medium / V2
 
 ## Routing
 
-| Route | 担当 | 判断基準 |
-|---|---|---|
-| `DIRECT_LUNA` | Luna Root | 極小・明白で、複雑な設計や広い探索が不要 |
-| `SCOUT_LUNA` | Luna Scout | read-heavy探索、設定・symbol・call path確認 |
-| `WORKER_TERRA` | Terra High Worker | 明確なscopeの実装、bug fix、test追加、局所refactor |
-| `CONTROLLER_SOL` | Sol Medium | 複数module、原因不明、設計判断、調査と実装の統合 |
-| `CONTROLLER_ASTRA` | Astra High | 最難関、高リスク、失敗コストが大きい |
+Rootは依頼種別、scope、不確実性、複雑性、risk、verificationをこの順に評価し、最小で完遂可能なrouteを一つ選ぶ。ユーザー指定のrole/modelは、安全性・利用可能性・read-only制約と矛盾しない限り優先する。詳細な実行規則のcanonical sourceはリポジトリrootの[`AGENTS.md`](../AGENTS.md)である。
+
+| Route | 担当 | 選択条件 | 境界 |
+|---|---|---|---|
+| `DIRECT_LUNA` | Luna Root | 極小・明白かつ可逆で、探索・設計判断・専用検証が不要 | 未調査の原因や複数moduleの整合を推測しない |
+| `SCOUT_LUNA` | Luna Scout | read-heavy探索、設定・symbol・call path確認のみ | read-only。実装しない |
+| `WORKER_TERRA` | Terra High Worker | scopeと受入条件が明確な実装、bug fix、test、局所refactor | 広いarchitecture、曖昧な複数module root cause、重大riskはSolへ昇格 |
+| `CONTROLLER_SOL` | Sol Medium | 複数module、原因不明、設計判断、調査と実装の統合 | 作業量だけでは選ばず、独立するLeaf作業だけを委譲 |
+| `CONTROLLER_ASTRA` | Astra High | Solで解消できない重要な不確実性を持つ高失敗コストの問題 | 高コストの予防利用はしない |
 
 ## Task packetとcontext ownership
 
 `fork_turns = "none"`を原則とし、以下のself-contained packetを渡します。
 
 ```text
-Original goal
-Assigned subtask
-Relevant files / evidence
-Constraints
-Acceptance criteria
-Expected response
+Objective / Known facts / evidence / Unknowns / Scope / Allowed / Forbidden
+Acceptance criteria / Verification / Authorization / Escalation
 ```
+
+role contractはrootの`AGENTS.md`をcanonical source、`agents/*.toml`をrole固有境界の同期先とする。下位の`AGENTS.md`または契約を増やす場合は、rootとの優先順位・参照・差分理由を明文化する。
 
 ```text
 Root context = routing state + distilled knowledge
