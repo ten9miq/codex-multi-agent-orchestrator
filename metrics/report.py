@@ -338,6 +338,18 @@ def main() -> int:
     else:
         print("  Rootタスクなし")
 
+    route_sources = Counter(provenance_value(row, "route_source") for row in roots)
+    inferred_direct = sum(
+        route_value(row, "initial_route") == "DIRECT_LUNA"
+        and provenance_value(row, "route_source") == "model"
+        for row in roots
+    )
+    print("\n■ Route判定の出所（Root）")
+    for source, count in route_sources.most_common():
+        print(f"  {source:<28} {count:>8,}")
+    print(f"  model推定のDIRECT_LUNA      {inferred_direct:>8,}")
+    print("  ※ model推定のDIRECT_LUNAは、Luna Rootがそのturnでagentを起動しなかったことを示し、明示的なDirect選択を証明しません。")
+
     completed = sum(row.get("status") == "COMPLETE" for row in roots)
     first = sum(bool(row.get("first_pass_success")) for row in roots)
     rework = sum(bool(row.get("possible_immediate_rework")) for row in roots)

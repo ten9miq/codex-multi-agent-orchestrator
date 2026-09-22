@@ -19,6 +19,16 @@ Codex Multi-Agent V2 の公開可能な設定、agent role、Metricsを管理す
 ```powershell
 .\scripts\install.ps1 -WhatIf
 ```
+
+Root routing指示も`CODEX_HOME/AGENTS.md`へ適用する場合は、既存ファイルを日時付きでバックアップしたうえで明示的に指定します。
+
+```powershell
+.\scripts\install.ps1 -InstallRootInstructions -WhatIf
+.\scripts\install.ps1 -InstallRootInstructions
+```
+
+`-InstallRootInstructions`を省略した場合、既存の`CODEX_HOME/AGENTS.md`は変更しません。
+
 個人パス、MCP接続、通知コマンド、trusted project、session、認証情報は公開設定から除外しています。
 
 ## 含まれるもの
@@ -31,7 +41,7 @@ Codex Multi-Agent V2 の公開可能な設定、agent role、Metricsを管理す
 
 ## 中心思想
 
-この構成は、安価なモデルだけで全てを処理するのではなく、`gpt-5.6-luna / medium`を常時Root Routerとして使い、タスクの複雑度とリスクに応じて高価なモデルを限定的に起動します。
+この構成は、通常時に`gpt-5.6-luna / medium`をRoot Routerとして使い、タスクの複雑度とリスクに応じて高価なモデルを限定的に起動します。Composerまたは依頼本文でTerra、Sol、Astra、対応roleが明示された場合は自動判定を迂回し、選択されたRoot自身または対応agentがそのRouteを直接実行します。
 
 ```text
 Luna Medium Root
@@ -41,6 +51,8 @@ Luna Medium Root
   ├─ CONTROLLER_SOL    複雑な調査・設計・実装
   └─ CONTROLLER_ASTRA  最難関・高リスク
 ```
+
+以下のtreeはLunaをRootにした自動ルーティング時を示します。Terra、Sol、AstraがRootとして明示選択されている場合は、対応するRouteのnodeから開始します。
 
 ```mermaid
 flowchart TD
@@ -65,17 +77,17 @@ Rootの責務はrouting、task packet構築、結果統合、escalation判断に
 
 ## Routing判定表
 
-Rootは依頼種別、変更scope、不確実性、複雑性、失敗リスク、必要な検証を順に確認し、最小で完遂可能なrouteを一つ選びます。単なる文章量、手順数、ファイル数では上位routeにしません。ユーザーのmodel/role指定と`read-only`・調査のみ等の制約は、利用可能性と安全性に矛盾しない限り優先します。
+Luna Rootは最終成果物、探索の必要性、変更scope、不確実性、失敗リスク、必要な検証を順に確認し、最小で完遂可能なrouteを一つ選びます。コストはRouteの成立条件を満たした後にだけ比較します。Composerまたは依頼本文で指定されたmodel/roleは自動判定より優先し、`read-only`・調査のみ等の指定は操作範囲を制約しますが、明示modelを下位Routeへ変更しません。
 
 | 依頼の状態 | Route | 例 | 選ばない条件 |
 |---|---|---|---|
-| 説明、既知設定の確認、単純操作、明白で可逆な極小修正 | `DIRECT_LUNA` | 1箇所のtypo、既知値の確認 | 実装方針、原因調査、複数箇所の整合が必要 |
-| 根拠収集・現在状態の調査だけ | `SCOUT_LUNA` | symbol、call path、関連test、文書の確認 | 書込み、修正、未依頼の設計変更が必要 |
-| scopeと受入条件が明確な変更 | `WORKER_TERRA` | bug fix、test追加、局所refactor | 広い設計判断、複数moduleの原因不明、重大なsecurity/correctness判断 |
-| 複数moduleの不確実性や設計判断を統合する必要がある | `CONTROLLER_SOL` | 非自明refactor、API移行、複数制約の統合 | 作業量だけが大きい、または狭く既知な実装 |
+| 対象・場所・操作が既知で、探索・複数証拠の照合・原因分析・挙動変更がすべて不要 | `DIRECT_LUNA` | 会話内の説明、翻訳、既知の単一値、完全指定されたtypo | `rg`、file探索、複数資料の比較、設計・実装判断が必要 |
+| 未知の事実・現在状態・根拠の取得だけ | `SCOUT_LUNA` | symbol、call path、関連test、設定、履歴、文書の確認 | 書込みが必要、または難しい因果・設計判断が核心 |
+| scopeと受入条件が明確な変更 | `WORKER_TERRA` | bug fix、test追加、局所refactor、挙動に影響する1ファイル変更 | 広い設計判断、複数moduleの原因不明、重大なsecurity/correctness判断 |
+| 原因不明、複数制約の統合、難しい調査結果の解釈 | `CONTROLLER_SOL` | 非自明refactor、API移行、複数module、read-onlyの設計分析 | 作業量だけが大きい、または狭く既知な実装 |
 | 高失敗コストで、Solでも重要な不確実性が残る | `CONTROLLER_ASTRA` | concurrency、distributed state、security-sensitive、破壊的migration | 予防的な高性能化、通常の調査・実装 |
 
-過少routingを避けるため、Directで未調査の根本原因や設計を推測しません。過剰routingを避けるため、既知の狭い作業を確認目的だけでWorker/Controllerへ送らず、Controllerも独立性・明確な所有範囲・待ち時間削減がある場合だけLeafへ委譲します。Workerは核心が広いarchitecture判断、複数moduleにまたがる曖昧なroot cause、重大なsecurity/correctness判断だと分かった場合だけSolへ、SolはAstraが必要な条件だけAstraへ昇格します。
+過少routingを避けるため、未知の対象探索、複数証拠の照合、原因切り分け、設計・実装方針の選択をDirectで行いません。調査規模が小さいことやagent起動オーバーヘッドはDirectへ下げる理由になりません。過剰routingを避けるため、最終成果物が明確な変更ならScoutを儀式的に挟まずWorkerへ直接送り、Controllerも独立性・明確な所有範囲・待ち時間削減がある場合だけLeafへ委譲します。Workerは核心が広いarchitecture判断、複数moduleにまたがる曖昧なroot cause、重大なsecurity/correctness判断だと分かった場合だけSolへ、SolはAstraが必要な条件だけAstraへ昇格します。
 
 ## Contextと結果の扱い
 

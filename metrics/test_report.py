@@ -87,6 +87,7 @@ class ReportTests(unittest.TestCase):
                 "initial_route": "DIRECT_LUNA",
                 "final_route": "DIRECT_LUNA",
                 "effective_route": "DIRECT_LUNA",
+                "route_source": "model",
                 "execution_mode": "ORCHESTRATED_ROUTE",
                 "model": "gpt-5.6-luna",
                 "status": "COMPLETE",
@@ -131,6 +132,7 @@ class ReportTests(unittest.TestCase):
                 "root_turn_id": "turn-b",
                 "initial_route": "WORKER_TERRA",
                 "final_route": "CONTROLLER_SOL",
+                "route_source": "model_and_spawn_agent",
                 "execution_mode": "LEGACY_ROOT_MODEL",
                 "model": "gpt-5.6-terra",
                 "status": "COMPLETE",
@@ -194,6 +196,9 @@ class ReportTests(unittest.TestCase):
         self.assertIn("既知内 検証FAIL率", rendered)
         self.assertIn("全Root 検証FAIL率", rendered)
         self.assertIn("DIRECT_LUNA", rendered)
+        self.assertIn("Route判定の出所（Root）", rendered)
+        self.assertIn("model推定のDIRECT_LUNA", rendered)
+        self.assertIn("明示的なDirect選択を証明しません", rendered)
         self.assertIn("WORKER_TERRA", rendered)
         self.assertIn("検証結果（Root）", rendered)
         self.assertIn("完了状態・検証の観測範囲と出所（Root）", rendered)

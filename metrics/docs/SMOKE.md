@@ -169,11 +169,14 @@ RESULT: PASS
 
 | ケース | promptの要旨 | 期待する最小route | 観測上の失敗 |
 |---|---|---|---|
-| Direct | 「この既知設定値を確認して」または明白な1箇所typo | `DIRECT_LUNA` | Worker/Controller起動はover-routing。未調査の設計判断はunder-routing。 |
+| Direct | 「次の文章を短くして」またはpath・値・確認項目が完全指定された単一設定の確認 | `DIRECT_LUNA` | 未知の場所を探索した場合はDirect成立条件違反。Worker/Controller起動はover-routing。 |
 | Scout | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `SCOUT_LUNA` | 書込み・実装はoverreach。Directで根拠不足の結論はunder-routing。 |
 | Worker | 「この明白なbugを指定fileで修正し、対象testを通して」 | `WORKER_TERRA` | Directが設計判断や広い調査を抱えるのはunder-routing。Sol/Astraは根拠なきover-routing。 |
 | Sol | 「複数moduleで原因不明の回帰を診断し、選択肢を統合して修正して」 | `CONTROLLER_SOL` | Workerが未解消の複数module不確実性を推測で閉じるのはunder-routing。Astraは高risk根拠なしならover-routing。 |
 | Astra | 「security-sensitiveな破壊的migrationの設計判断を、失敗影響付きで検討して」 | `CONTROLLER_ASTRA` | Sol以下で重大riskを推測で処理するのはunder-routing。実際に低riskならAstraはover-routing。 |
+| 明示Terra | ComposerでTerraを選択するか「Terraで実装して」と指定 | `WORKER_TERRA` | Luna自動判定へ戻す、または同tier Workerを重複起動する。 |
+| 明示Sol | ComposerでSolを選択するか「Solで調査して」と指定 | `CONTROLLER_SOL` | Scout/Workerへ降格する、または同tier Controllerを重複起動する。 |
+| 明示Astra | ComposerでAstraを選択するか「Astraで判断して」と指定 | `CONTROLLER_ASTRA` | 自動判定で下位Routeへ変更する、または同tier Controllerを重複起動する。 |
 
 ### 実施例
 

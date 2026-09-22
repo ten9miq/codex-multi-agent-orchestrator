@@ -2,7 +2,7 @@
 
 ## 目的
 
-このオーケストレーターは、安価なモデルだけで全てを処理する構成ではありません。Lunaを常時Root Routerとして使い、タスクの複雑度とリスクに応じてTerra、Sol、Astraへ限定的に委譲します。
+このオーケストレーターは、安価なモデルだけで全てを処理する構成ではありません。通常時はLunaをRoot Routerとして使い、タスクの複雑度とリスクに応じてTerra、Sol、Astraへ限定的に委譲します。Composerまたは依頼本文で上位model・roleが明示された場合は、Lunaの自動判定を迂回して対応Routeを直接使います。
 
 最適化対象はtoken数だけではありません。
 
@@ -15,6 +15,8 @@
 ```
 
 ## Tree
+
+以下はLunaをRootにした自動ルーティング時のtreeです。Terra、Sol、AstraがRootとして明示選択されている場合は、対応するRouteのnodeから開始し、同tierのagentを重複起動しません。
 
 ```mermaid
 flowchart TD
@@ -54,14 +56,14 @@ Root: Luna Medium / V2
 
 ## Routing
 
-Rootは依頼種別、scope、不確実性、複雑性、risk、verificationをこの順に評価し、最小で完遂可能なrouteを一つ選ぶ。ユーザー指定のrole/modelは、安全性・利用可能性・read-only制約と矛盾しない限り優先する。詳細な実行規則のcanonical sourceはリポジトリrootの[`AGENTS.md`](../AGENTS.md)である。
+Luna Rootは最終成果物、探索の必要性、scope、不確実性、risk、verificationをこの順に評価し、最小で完遂可能なrouteを一つ選ぶ。コストはRoute成立後にだけ比較する。Composerまたは依頼本文で指定されたrole/modelは自動判定より優先し、Root自身が選択modelなら同tier agentを重複起動しない。read-only制約は操作範囲を制限するが明示modelを下位Routeへ変更しない。詳細な実行規則のcanonical sourceはリポジトリrootの[`AGENTS.md`](../AGENTS.md)である。
 
 | Route | 担当 | 選択条件 | 境界 |
 |---|---|---|---|
-| `DIRECT_LUNA` | Luna Root | 極小・明白かつ可逆で、探索・設計判断・専用検証が不要 | 未調査の原因や複数moduleの整合を推測しない |
-| `SCOUT_LUNA` | Luna Scout | read-heavy探索、設定・symbol・call path確認のみ | read-only。実装しない |
-| `WORKER_TERRA` | Terra High Worker | scopeと受入条件が明確な実装、bug fix、test、局所refactor | 広いarchitecture、曖昧な複数module root cause、重大riskはSolへ昇格 |
-| `CONTROLLER_SOL` | Sol Medium | 複数module、原因不明、設計判断、調査と実装の統合 | 作業量だけでは選ばず、独立するLeaf作業だけを委譲 |
+| `DIRECT_LUNA` | Luna Root | 対象・場所・操作が既知で、探索・複数証拠の照合・原因分析・挙動変更がすべて不要 | 条件をすべて満たす場合だけ。agent起動コストで緩和しない |
+| `SCOUT_LUNA` | Luna Scout | 未知の事実・現在状態・根拠をrepository、設定、履歴、log、文書から取得するread-only調査 | 小規模でもDirectへ下げない。難しい因果・設計判断はSolへ |
+| `WORKER_TERRA` | Terra High Worker | scopeと受入条件が明確な変更、bug fix、test、局所refactor | 限定的な事前確認だけならScoutを挟まない。広いarchitecture、曖昧なroot cause、重大riskはSolへ昇格 |
+| `CONTROLLER_SOL` | Sol Medium | 複数module、原因不明、調査結果の解釈、設計判断、非自明なrefactor/API移行 | read-onlyでも難しい原因・設計判断を含む。独立するLeaf作業だけを委譲 |
 | `CONTROLLER_ASTRA` | Astra High | Solで解消できない重要な不確実性を持つ高失敗コストの問題 | 高コストの予防利用はしない |
 
 ## Task packetとcontext ownership

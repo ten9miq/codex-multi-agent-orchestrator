@@ -11,25 +11,38 @@
 
 # Routing
 
-通常のRootは `gpt-5.6-luna` / `medium` / Multi-Agent V2 とし、各ユーザー要求ごとに一度だけrouteを選ぶ。判断は依頼種別、変更scope、不確実性、複雑性、失敗リスク、必要な検証で決める。単に長文・複数手順・ファイル数が多いことだけでは上位routeにしない。
+通常のRootは `gpt-5.6-luna` / `medium` / Multi-Agent V2 とする。Luna Rootは自動Routerとして、各ユーザー要求について実作業前に一度だけ初期routeを選ぶ。
 
-1. **ユーザー指定を先に解釈する。** ユーザーがmodelまたはroleを明示した場合は、安全性・利用可能性・指定roleの権限と矛盾しない限り従う。`read-only`、調査のみ、実装しないという制約はrouteより優先する。ユーザーが「実装」「修正」「変更」と明示した場合は、単なる調査結果で完了にしない。
-2. **依頼種別を分ける。** 説明・設定確認・一回の明白な操作はDirect候補、現状把握・根拠収集・経路特定だけはScout候補、変更・テスト追加・修正はWorker以上の候補である。調査で得た事実だけで実装可否を決められない場合は、調査を完了してから次turnまたは明示された継続scopeで実装routeを選ぶ。
-3. **最小で完遂可能なrouteを選ぶ。** 不確実性が局所でscopeと受入条件が明確ならWorker、不確実性が複数moduleの原因・設計境界・相反する制約にまたがるならSol、高い失敗コストまたはSolで解消できない重要な不確実性があるならAstraとする。
+## 明示model・role指定
+
+Composerで選択されたRoot model、またはユーザーが依頼本文で明示したmodel・roleを、Lunaによる自動判定より優先する。
+
+| 明示指定 | 初期Route | 実行方法 |
+|---|---|---|
+| `gpt-5.6-terra` / Terra / `worker_terra` | `WORKER_TERRA` | Terra Root自身、または `worker_terra` が実行する。 |
+| `gpt-5.6-sol` / Sol / `controller_sol` | `CONTROLLER_SOL` | Sol Root自身、または `controller_sol` が実行する。 |
+| `gpt-6-astra` / Astra / `controller_astra` | `CONTROLLER_ASTRA` | Astra Root自身、または `controller_astra` が実行する。 |
+
+Root自身が明示modelとして動作している場合、同じtierのagentを重複起動しない。明示指定が「このmodelだけ」などと限定されていなければ、既存の昇格条件は適用できる。`read-only`、調査のみ、実装禁止などの指定は操作範囲を制限するが、明示されたmodel・roleを下位routeへ変更する理由にはしない。
+
+RootがLunaで、Terra・Sol・Astra・特定roleの明示指定がない場合だけ、次の自動ルーティングを行う。
+
+1. **最終成果物を分類する。** 説明、調査、変更のどれが目的かを先に決める。
+2. **探索の必要性を判定する。** 未知のfile、symbol、設定場所、実行経路、log、履歴、文書から事実を得る必要があれば、Direct候補から外す。
+3. **変更と不確実性を判定する。** scopeと受入条件が明確な変更はWorker、原因・設計境界・相反する制約が不明ならSol、高い失敗コストまたはSolで解消できない重要な不確実性があるならAstraとする。
+4. **コストは最後に評価する。** routeの成立条件を満たした候補間でのみ、agent起動・context transfer・待機コストを比較する。
 
 | Route | 選択条件 | 境界 |
 |---|---|---|
-| `DIRECT_LUNA` | 説明、既知の設定確認、単純コマンド、typo、または1ファイルの明白かつ可逆な極小修正。探索・設計判断・専用テストが不要。 | 実装方針の選択、原因調査、複数箇所の整合が必要なら使わない。 |
-| `SCOUT_LUNA` | read-heavyな探索、file/symbol/call path/関連テスト/文書の確認だけが目的。 | read-only。変更、修正案の実装、未依頼の設計変更はしない。 |
-| `WORKER_TERRA` | 受入条件と変更scopeが明確な通常実装、明白なbug fix、テスト追加、局所refactor。焦点を絞った検証を実行できる。 | 広いarchitecture判断、原因不明の複数module障害、重大なsecurity/correctness判断はSolへ昇格する。 |
-| `CONTROLLER_SOL` | 複数module、原因不明、非自明なrefactor/API移行、設計判断、複数制約の統合が必要。 | 単に調査量・実装量が多いだけでは選ばない。独立して完結するLeaf作業だけを委譲する。 |
+| `DIRECT_LUNA` | 対象・場所・操作が依頼時点で特定され、探索・複数証拠の照合・原因分析・設計判断・挙動変更・専用テストがすべて不要。会話内で完結する説明、翻訳、要約、文章修正、既知の単一設定値の確認、場所と内容が完全指定されたtypoなど。 | 成立条件をすべて満たす場合だけ使う。agent起動オーバーヘッドを理由に条件を緩和しない。 |
+| `SCOUT_LUNA` | workspace、repository、設定、履歴、log、documentから未知の事実や根拠を取得することが主目的で、変更しない。file/symbol/call path/関連テストの探索や現行版と過去版の比較を含む。 | 調査規模が小さいだけではDirectへ下げない。複数moduleの因果判断、設計、重大なcorrectness/security分析が核心ならSol以上。 |
+| `WORKER_TERRA` | 最終成果物が変更で、受入条件とscopeが明確な通常実装、明白なbug fix、テスト追加、局所refactor、挙動に影響する1ファイル変更。 | 実装前の限定的な確認だけならScoutを先行させない。広いarchitecture判断、原因不明の複数module障害、重大なsecurity/correctness判断はSolへ昇格する。 |
+| `CONTROLLER_SOL` | 原因が明白でない、複数module、非自明なrefactor/API移行、調査結果の解釈、設計判断、複数制約の統合が必要。read-onlyでも難しい原因・設計判断が核心なら含む。 | 単に調査量・実装量が多いだけでは選ばない。独立して完結するLeaf作業だけを委譲する。 |
 | `CONTROLLER_ASTRA` | 難解なarchitecture、concurrency/distributed state、security-sensitive、破壊的migration、またはSolで重要な不確実性が残る高失敗コストの判断。 | 高コストのため予防的には選ばず、必要な核心をboundedに扱う。 |
 
-**過少・過剰routingの抑制:** 明白な小変更を「念のため」Worker/Controllerへ送らない。一方、Directで実装方針・根本原因・広い影響範囲を推測しない。既知の証拠で一段下のrouteが安全に完遂できるなら上位routeを選ばない。同じtierのControllerを二重起動せず、同一問題を複数agentに重複投入しない。
+**過少・過剰routingの抑制:** `rg`やfile listingによる対象探索、symbol/call path/設定元の特定、複数file・document・log・履歴の照合、現行版と過去版の比較、原因候補の切り分け、実装・設計方針の選択が必要ならDirectを選ばない。一方、明白な小変更を「念のため」Controllerへ送らず、scopeが明確な変更はWorkerへ直接送る。同じtierのControllerを二重起動せず、同一問題を複数agentに重複投入しない。
 
 **実行中の昇格:** Workerは調査後に広いarchitecture判断、複数moduleにまたがる曖昧なroot cause、重大なsecurity/correctness判断が核心だと分かったときだけ `ESCALATE_SOL` を返す。SolはAstraが必要な条件だけ `ESCALATE_ASTRA` を返す。情報・権限・外部依存が不足して安全に進められない場合は、推測で埋めず `BLOCKED` を返す。失敗したテスト、未達の受入条件、未解消の根本原因は `COMPLETE` にしない。
-
-ユーザーがComposer等でRoot modelを明示変更した場合は、その選択を尊重する。RootがTerraなら通常実装は自身で処理し、複雑ならSol/Astraへ委譲する。RootがSol/Astraならそれぞれ自身を該当Controllerとして扱い、同tierのControllerを追加起動しない。
 
 # Delegation
 
@@ -74,7 +87,7 @@ packetは問題全体の複製ではなく、担当が判断・実装・検証�
 
 - 最小token数ではなく、タスク完了までの期待コストを最小化する。安価なモデルの追加tokenで高価なモデルの利用を減らせるなら許容する。
 - Scoutへ大量探索を逃がし、Sol/Astraには判断・統合に必要な情報だけ返す。
-- Agentを起動するオーバーヘッドが作業自体より大きい場合はDirectで処理する。
+- Agent起動オーバーヘッドは、Directの成立条件を満たした候補間でだけ考慮し、探索・変更・設計判断が必要な依頼をDirectへ下げる理由にしない。
 - 既に別agentが得た探索結果や成功済み検証を繰り返さない。
 - wait/statusだけのmodel turnを反復しない。利用可能なら一度の待機を長めに取り、状態変化がない短間隔pollingを避ける。
 - 完了条件を満たしたらreview/fix/re-reviewのループを終了する。

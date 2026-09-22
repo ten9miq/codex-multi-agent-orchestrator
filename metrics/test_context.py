@@ -78,6 +78,25 @@ def user_message(text: str) -> dict:
 
 
 class ContextObservabilityTests(unittest.TestCase):
+    def test_explicit_root_models_map_directly_to_their_routes(self) -> None:
+        cases = {
+            "gpt-5.6-terra": "WORKER_TERRA",
+            "gpt-5.6-sol": "CONTROLLER_SOL",
+            "gpt-6-astra": "CONTROLLER_ASTRA",
+        }
+        for model, expected_route in cases.items():
+            with self.subTest(model=model):
+                values = rollout_values(include_context=False)
+                values[1]["payload"]["model"] = model
+                with tempfile.TemporaryDirectory() as temp:
+                    path = Path(temp) / f"rollout-{model}.jsonl"
+                    write_rollout(path, values)
+                    turn = parse_rollout_turns(path)[0]
+
+                self.assertEqual(turn.initial_route, expected_route)
+                self.assertEqual(turn.final_route, expected_route)
+                self.assertEqual(turn.route_source, "model")
+
     def test_consecutive_root_turn_rework_classes_preserve_legacy_boolean(self) -> None:
         cases = [
             ("前の結果は違います。直してください。", "MODEL_CORRECTION", True),

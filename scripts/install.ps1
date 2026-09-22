@@ -1,6 +1,7 @@
 ﻿param(
     [string]$CodexHome = $env:CODEX_HOME,
-    [switch]$WhatIf
+    [switch]$WhatIf,
+    [switch]$InstallRootInstructions
 )
 
 if ([string]::IsNullOrWhiteSpace($CodexHome)) {
@@ -14,6 +15,8 @@ $sourceAgents = Join-Path $repoRoot 'agents'
 $destinationAgents = Join-Path $CodexHome 'agents'
 $sourceMetrics = Join-Path $repoRoot 'metrics'
 $destinationMetrics = Join-Path $CodexHome 'metrics'
+$sourceRootInstructions = Join-Path $repoRoot 'AGENTS.md'
+$destinationRootInstructions = Join-Path $CodexHome 'AGENTS.md'
 
 $managedTopLevelKeys = @(
     'model',
@@ -117,6 +120,11 @@ if ($WhatIf) {
     }
     Write-Host "agent設定を配置します（dry-run）: $destinationAgents"
     Write-Host "Metricsを配置します（dry-run）: $destinationMetrics"
+    if ($InstallRootInstructions) {
+        Write-Host "Root routing指示をバックアップ後に配置します（dry-run）: $destinationRootInstructions"
+    } else {
+        Write-Host 'Root routing指示は変更しません。適用する場合は -InstallRootInstructions を指定してください。'
+    }
     exit 0
 }
 
@@ -138,6 +146,15 @@ New-Item -ItemType Directory -Force -Path $destinationMetrics | Out-Null
 Get-ChildItem -LiteralPath $sourceMetrics -File |
     Where-Object { $_.Name -notin @('state.json', 'routing-metrics.jsonl') } |
     Copy-Item -Destination $destinationMetrics -Force
+if ($InstallRootInstructions) {
+    if (Test-Path -LiteralPath $destinationRootInstructions) {
+        $instructionsBackup = "$destinationRootInstructions.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        Copy-Item -LiteralPath $destinationRootInstructions -Destination $instructionsBackup
+        Write-Host "既存AGENTS.mdをバックアップしました: $instructionsBackup"
+    }
+    Copy-Item -LiteralPath $sourceRootInstructions -Destination $destinationRootInstructions -Force
+    Write-Host "Root routing指示を適用しました: $destinationRootInstructions"
+}
 Write-Host "公開テンプレートを適用しました: $destination"
 Write-Host "agent設定を適用しました: $destinationAgents"
 Write-Host "Metricsを適用しました: $destinationMetrics"
