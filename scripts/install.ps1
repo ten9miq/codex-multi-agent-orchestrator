@@ -4,6 +4,8 @@
     [switch]$InstallRootInstructions
 )
 
+$ErrorActionPreference = 'Stop'
+
 if ([string]::IsNullOrWhiteSpace($CodexHome)) {
     $CodexHome = Join-Path $env:USERPROFILE '.codex'
 }
