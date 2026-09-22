@@ -9,7 +9,7 @@
 | `root_thread_id` / `root_turn_id` | 帰属する Root thread / Root turn |
 | `turn_id` | turn ID |
 | `is_root` | Root か |
-| `agent_role` | `scout` / `worker_terra` 等の role |
+| `agent_role` | `scout` / `worker_luna` / `worker_sol` 等の role |
 | `route` / `initial_route` / `final_route` / `effective_route` | 互換用の最終 Route / 最初の Route / 最終 Route / レポートで用いる実効 Route。`effective_route` は `final_route` の後方互換 alias。 |
 | `model` / `reasoning_effort` / `multi_agent_version` | 実効 model、effort、V1/V2 |
 | `execution_mode` | `ORCHESTRATED_ROUTE` はV2/agent role/protocol Routeを観測できたturn、`LEGACY_ROOT_MODEL` はmodel由来のlegacy推定Route。旧JSONLでfieldがなければreportは`UNKNOWN`。 |

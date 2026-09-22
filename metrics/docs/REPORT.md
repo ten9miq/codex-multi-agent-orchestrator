@@ -40,13 +40,13 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 |---|---|
 | 冒頭 | `対象期間` はUTCに正規化した半開区間。`Root turn数` は Root 行数、`ユニークRoot thread/session数` は同じ会話内の複数turnを重複計上しない数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
 | 初期ルート | Root の `initial_route` 分布。Root がなければその旨を表示。 |
-| Route判定の出所 | `route_source`別の件数と、Luna Rootがagentを起動しなかったことから推定された`DIRECT_LUNA`件数を表示する。model推定は明示的なDirect選択の証明ではない。 |
+| Route判定の出所 | `route_source`別の件数と、モデルから推定された`DIRECT_LUNA`件数を表示する。GPT-6 Luna Rootがツールを使いagentを起動しなかったturnは、明示Routeがない限り`UNKNOWN`にする。model推定は明示的なDirect選択の証明ではない。 |
 | 実行モード | `ORCHESTRATED_ROUTE` と `LEGACY_ROOT_MODEL` を分ける。旧Metricsでfieldがなければ`UNKNOWN`であり、legacyと断定しない。 |
-| Route別 品質・task使用量 | 初期RouteごとのRoot turn数を分母に、完了率、初回完遂率、後方互換の手戻り候補率、追加要求・モデル訂正・不明のcue分類率、Rootと帰属subagentを合算した平均/P90 token、weight設定時の平均weighted costを表示する。 |
+| Route別 品質・task使用量 | 初期RouteごとのRoot turn数を分母に、完了率、初回完遂率、後方互換の手戻り候補率、追加要求・モデル訂正・不明のcue分類率、Rootと帰属subagentを合算した平均/P90 token、weight設定時の平均weighted costを表示する。GPT-6 Luna Rootがツールを使いagentを起動しない要確認件数も表示する。 |
 | 品質 / 手戻り分類 / 検証結果 | `完了率` は Root の `status=COMPLETE`、`初回完遂率` は `first_pass_success`。`rework_class` は次Root turnのcueを `NONE` / `USER_FOLLOWUP` / `MODEL_CORRECTION` / `UNKNOWN` に分類し、Root turn別と会話内（Root thread/session）で表示する。`possible_immediate_rework` は旧heuristicとして併記する。検証結果は全Rootと初期Route別に `PASS` / `FAIL` / `NOT_RUN` / `UNKNOWN` を欠損と区別して表示する。 |
 | 完了状態・検証の観測範囲と出所 | `status_source`を`assistant_message`、`task_complete.last_agent_message`、通常完了の`completion_event`、`UNKNOWN`別に表示する。`verification_source`を持つRoot数をcoverageとして示し、`FAIL / coverage`の既知内FAIL率と`FAIL / 全Root turn`の全Root FAIL率を別表示する。完了eventは`verification`を補完せず、旧Metricsまたはprotocolなしは`UNKNOWN`である。 |
 | Agent返却結果サイズ | assistant 結果と `USER_RESULT` の推定 token（文字数÷4）の平均・中央値・P90・最大。`USER_RESULT` がない既存 rollout は0。 |
-| 昇格 | `Terra → Sol` は初期 Route が `WORKER_TERRA` の Root のうち `escalation_count >= 1`、`Sol → Astra` は初期 Route が `CONTROLLER_SOL` の Root のうち `effective_route=CONTROLLER_ASTRA`。全Rootの昇格率と `initial_route → effective_route` の遷移件数も表示する。 |
+| 昇格 | `Luna Worker → Sol` は初期 Route が `WORKER_LUNA` の Root のうち `escalation_count >= 1`、`Sol Worker → Controller` は初期 Route が `WORKER_SOL` で最終 Route が `CONTROLLER_SOL`、`Sol Controller → Astra` は初期 Route が `CONTROLLER_SOL` で最終 Route が `CONTROLLER_ASTRA`。全Rootの昇格率と `initial_route → effective_route` の遷移件数も表示する。 |
 | モデル別使用量 | 実効 model ごとの turn 数、input、cached input、output、reasoning、total token。total の多い順。 |
 | Auto Review | `codex-auto-review` のturn、token内訳、cached比率、全tokenに占める比率、weight設定時のcostを通常のRouting taskと分けて表示する。 |
 | Context peak | turnごとの `last_token_usage` から得たcontext peakをmodel別に表示する。累積input tokenやtask total tokenとは別指標。 |
@@ -57,7 +57,7 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 
 ## 重み付きコスト
 
-初期状態の `cost-weights.json` は全 model が `null` なので無効です。値は100万 token あたりの任意 weight です。
+現在の `cost-weights.json` は公開API価格を参考weightとして設定しています。値は100万 token あたりです。以下は旧構成の相対weightの例であり、現在の設定値ではありません。
 
 ```json
 {
@@ -72,7 +72,7 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 
 ## サンプルレポートの読み方
 
-次は個人パスを省略した、2日分のサンプルです。実際の値は利用状況によって変わります。
+次は旧構成で作成した、個人パスを省略した2日分の履歴サンプルです。現在の役割・モデル構成の出力例ではありません。
 
 ```text
 Codex ルーティングレポート（直近 2 日）
@@ -133,7 +133,7 @@ Rootタスク数                         74
 
 ### 2. 初期ルートの分布
 
-74 Root taskのうち59件が`DIRECT_LUNA`です。これは約80%をRootが直接処理していることを示します。
+旧サンプルでは74 Root taskのうち59件が`DIRECT_LUNA`です。旧集計はモデルからの推定を含むため、この件数だけでDirectの成立条件を満たしたとは判断できません。
 
 この比率が高いこと自体は問題ではありません。次を合わせて判断します。
 
@@ -141,7 +141,7 @@ Rootタスク数                         74
 - 初回完遂率が落ちていないか
 - Rootのtask tokenが大きくなっていないか
 
-`DIRECT_LUNA`が多く、初回完遂率も高いなら、routingが過剰にsubagentを起動していない良い状態です。`DIRECT_LUNA`が多いのに手戻りが多い場合は、Terraへ渡す境界が厳しすぎます。
+現行構成では、GPT-6 Luna Rootがツールを使い、agent起動も明示Routeもないturnは `UNKNOWN` として扱います。`DIRECT_LUNA` の件数に加え、探索・変更がDirectへ流れていないかを具体的なturnで確認します。
 
 ### 3. 昇格率0%の読み方
 

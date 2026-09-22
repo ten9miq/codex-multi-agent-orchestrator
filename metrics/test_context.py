@@ -22,7 +22,7 @@ def rollout_values(*, include_context: bool = True) -> list[dict]:
         {"type": "session_meta", "payload": {"id": "root-a", "source": {}}},
         {
             "type": "turn_context",
-            "payload": {"model": "gpt-5.6-luna", "effort": "medium", "multi_agent_version": "v2"},
+            "payload": {"model": "gpt-6-luna", "effort": "medium", "multi_agent_version": "v2"},
         },
         {
             "type": "event_msg",
@@ -82,6 +82,7 @@ class ContextObservabilityTests(unittest.TestCase):
         cases = {
             "gpt-5.6-terra": "WORKER_TERRA",
             "gpt-5.6-sol": "CONTROLLER_SOL",
+            "gpt-6-sol": "CONTROLLER_SOL",
             "gpt-6-astra": "CONTROLLER_ASTRA",
         }
         for model, expected_route in cases.items():
@@ -245,8 +246,16 @@ class ContextObservabilityTests(unittest.TestCase):
         self.assertEqual(turn.retry_count, 0)
         self.assertEqual(turn.status_source, "completion_event")
         self.assertIsNone(turn.verification_source)
-        self.assertEqual(turn.final_route, "DIRECT_LUNA")
+        self.assertEqual(turn.final_route, "UNKNOWN")
         self.assertEqual(turn.route_source, "model")
+
+    def test_gpt6_luna_without_tools_remains_direct_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-direct.jsonl"
+            write_rollout(path, rollout_values(include_context=False))
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.initial_route, "DIRECT_LUNA")
 
     def test_protocol_provenance_prefers_task_complete_last_agent_message(self) -> None:
         values = rollout_values(include_context=False)

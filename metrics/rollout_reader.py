@@ -21,6 +21,8 @@ from typing import Any, Iterable, Iterator, TextIO
 ROUTE_BY_ROLE = {
     "scout": "SCOUT_LUNA",
     "worker_terra": "WORKER_TERRA",
+    "worker_luna": "WORKER_LUNA",
+    "worker_sol": "WORKER_SOL",
     "controller_sol": "CONTROLLER_SOL",
     "expert": "EXPERT_SOL",
     "controller_astra": "CONTROLLER_ASTRA",
@@ -29,8 +31,10 @@ ROUTE_RANK = {
     "DIRECT_LUNA": 0,
     "SCOUT_LUNA": 0,
     "WORKER_TERRA": 1,
-    "CONTROLLER_SOL": 2,
-    "CONTROLLER_ASTRA": 3,
+    "WORKER_LUNA": 1,
+    "WORKER_SOL": 2,
+    "CONTROLLER_SOL": 3,
+    "CONTROLLER_ASTRA": 4,
 }
 WAIT_TOOLS = {"wait_agent", "list_agents", "wait", "write_stdin"}
 KNOWN_TOOLS = WAIT_TOOLS | {
@@ -652,9 +656,14 @@ class Turn:
             base = {
                 "gpt-5.6-terra": "WORKER_TERRA",
                 "gpt-5.6-sol": "CONTROLLER_SOL",
+                "gpt-6-sol": "CONTROLLER_SOL",
                 "gpt-6-astra": "CONTROLLER_ASTRA",
             }.get(self.model, "DIRECT_LUNA")
-            if base == "DIRECT_LUNA" and routes:
+            # GPT-6 Luna Rootのtool使用はDirectの証拠にならない。
+            # agentを起動せず調査したturnは明示protocolがない限りUNKNOWNとする。
+            if self.model == "gpt-6-luna" and self._tool_names:
+                base = "UNKNOWN"
+            if base in {"DIRECT_LUNA", "UNKNOWN"} and routes:
                 self.initial_route = routes[0]
                 self.final_route = max(routes, key=lambda route: ROUTE_RANK.get(route, -1))
                 ranks = [ROUTE_RANK.get(route, 0) for route in routes]
@@ -668,8 +677,8 @@ class Turn:
                     if ROUTE_RANK.get(route, 0) > ROUTE_RANK.get(base, 0)
                 ]
             self.route = self.final_route
-            self.route_source = "spawn_agent" if base == "DIRECT_LUNA" and routes else "model"
-            if routes and base != "DIRECT_LUNA":
+            self.route_source = "spawn_agent" if base in {"DIRECT_LUNA", "UNKNOWN"} and routes else "model"
+            if routes and base not in {"DIRECT_LUNA", "UNKNOWN"}:
                 self.route_source = "model_and_spawn_agent"
             escalation = 0
             best = ranks[0] if ranks else 0

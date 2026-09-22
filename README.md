@@ -41,39 +41,43 @@ Root routing指示も`CODEX_HOME/AGENTS.md`へ適用する場合は、既存フ�
 
 ## 中心思想
 
-この構成は、通常時に`gpt-5.6-luna / medium`をRoot Routerとして使い、タスクの複雑度とリスクに応じて高価なモデルを限定的に起動します。Composerまたは依頼本文でTerra、Sol、Astra、対応roleが明示された場合は自動判定を迂回し、選択されたRoot自身または対応agentがそのRouteを直接実行します。
+この構成は、通常時に`gpt-6-luna / medium`をRoot Routerとして使い、タスクの複雑度とリスクに応じて高いeffortと上位モデルを限定的に起動します。Composerまたは依頼本文でモデルやroleが明示された場合はその指定を優先します。
 
 ```text
 Luna Medium Root
   ├─ DIRECT_LUNA       極小・明白な処理
   ├─ SCOUT_LUNA        read-heavyな探索
-  ├─ WORKER_TERRA      通常実装
+  ├─ WORKER_LUNA       通常実装
+  ├─ WORKER_SOL        難しいが境界の明確な実装
   ├─ CONTROLLER_SOL    複雑な調査・設計・実装
   └─ CONTROLLER_ASTRA  最難関・高リスク
 ```
 
-以下のtreeはLunaをRootにした自動ルーティング時を示します。Terra、Sol、AstraがRootとして明示選択されている場合は、対応するRouteのnodeから開始します。
+以下のtreeはLunaをRootにした自動ルーティング時を示します。別モデルがRootとして明示選択されている場合はそのモデルを優先し、作業形態は依頼の範囲で決めます。
 
 ```mermaid
 flowchart TD
-    U["User"] --> R["Luna Medium Root Router<br/>gpt-5.6-luna / medium / V2"]
+    U["User"] --> R["Luna Medium Root Router<br/>gpt-6-luna / medium / V2"]
 
     R -->|"極小・明白"| D["DIRECT_LUNA<br/>Luna Medium"]
     R -->|"read-heavy探索"| S["SCOUT_LUNA<br/>Luna Scout / Leaf"]
-    R -->|"通常実装"| W["WORKER_TERRA<br/>Terra High / Leaf"]
+    R -->|"通常実装"| W["WORKER_LUNA<br/>Luna High / Leaf"]
+    R -->|"難しい既知の実装"| SW["WORKER_SOL<br/>Sol High / Leaf"]
     R -->|"複雑"| C["CONTROLLER_SOL<br/>Sol Medium"]
     R -->|"最難関・高リスク"| A["CONTROLLER_ASTRA<br/>Astra High"]
 
     C --> CS["Luna Scout / Leaf"]
-    C --> CW["Terra Worker / Leaf"]
-    C --> CE["Sol Expert / Leaf"]
+    C --> CW["Luna High Worker / Leaf"]
+    C --> SCW["Sol High Worker / Leaf"]
+    C --> CE["Sol XHigh Expert / Leaf"]
 
     A --> AS["Luna Scout / Leaf"]
-    A --> AW["Terra Worker / Leaf"]
-    A --> AE["Sol Expert / Leaf"]
+    A --> AW["Luna High Worker / Leaf"]
+    A --> ASW["Sol High Worker / Leaf"]
+    A --> AE["Sol XHigh Expert / Leaf"]
 ```
 
-Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装にTerra Controllerは置かず、`Luna → Terra High Worker`で直接処理します。LeafはScout、Terra Worker、Sol Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
+Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装は`Luna Medium Root → Luna High Worker`で直接処理し、難しい既知の実装はSol High Workerへ送ります。LeafはScout、Luna/Sol Worker、Sol XHigh Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
 
 ## Routing判定表
 
@@ -83,11 +87,12 @@ Luna Rootは最終成果物、探索の必要性、変更scope、不確実性、
 |---|---|---|---|
 | 対象・場所・操作が既知で、探索・複数証拠の照合・原因分析・挙動変更がすべて不要 | `DIRECT_LUNA` | 会話内の説明、翻訳、既知の単一値、完全指定されたtypo | `rg`、file探索、複数資料の比較、設計・実装判断が必要 |
 | 未知の事実・現在状態・根拠の取得だけ | `SCOUT_LUNA` | symbol、call path、関連test、設定、履歴、文書の確認 | 書込みが必要、または難しい因果・設計判断が核心 |
-| scopeと受入条件が明確な変更 | `WORKER_TERRA` | bug fix、test追加、局所refactor、挙動に影響する1ファイル変更 | 広い設計判断、複数moduleの原因不明、重大なsecurity/correctness判断 |
+| scopeと受入条件が明確な通常変更 | `WORKER_LUNA` | bug fix、test追加、局所refactor、挙動に影響する1ファイル変更 | 難しい中核判断、広い設計判断、原因不明の複数module障害 |
+| 難しいが責務と受入条件が定まった変更 | `WORKER_SOL` | 既知の複数箇所変更、局所的な非自明のcorrectness判断 | 未知のroot cause、複数制約の設計統合、Astra級の高リスク判断 |
 | 原因不明、複数制約の統合、難しい調査結果の解釈 | `CONTROLLER_SOL` | 非自明refactor、API移行、複数module、read-onlyの設計分析 | 作業量だけが大きい、または狭く既知な実装 |
 | 高失敗コストで、Solでも重要な不確実性が残る | `CONTROLLER_ASTRA` | concurrency、distributed state、security-sensitive、破壊的migration | 予防的な高性能化、通常の調査・実装 |
 
-過少routingを避けるため、未知の対象探索、複数証拠の照合、原因切り分け、設計・実装方針の選択をDirectで行いません。調査規模が小さいことやagent起動オーバーヘッドはDirectへ下げる理由になりません。過剰routingを避けるため、最終成果物が明確な変更ならScoutを儀式的に挟まずWorkerへ直接送り、Controllerも独立性・明確な所有範囲・待ち時間削減がある場合だけLeafへ委譲します。Workerは核心が広いarchitecture判断、複数moduleにまたがる曖昧なroot cause、重大なsecurity/correctness判断だと分かった場合だけSolへ、SolはAstraが必要な条件だけAstraへ昇格します。
+過少routingを避けるため、未知の対象探索、複数証拠の照合、原因切り分け、設計・実装方針の選択をDirectで行いません。GPT-6 Lunaの能力向上は通常Workerの担当範囲に反映し、Directの条件は緩めません。調査規模が小さいことやagent起動オーバーヘッドはDirectへ下げる理由になりません。最終成果物が明確な変更ならScoutを儀式的に挟まずWorkerへ直接送り、依頼時点の証拠でLuna HighとSol Highを選びます。下位effortを毎回順番に試す方式にはしません。
 
 ## Contextと結果の扱い
 
@@ -193,7 +198,7 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" `
 正常時は概ね次のようになります。
 
 ```text
-[OK] ROOT | gpt-5.6-luna / medium / v2
+[OK] ROOT | gpt-6-luna / medium / v2
 └─ [OK] controller_astra | gpt-6-astra / high / v2
 
 RESULT: PASS

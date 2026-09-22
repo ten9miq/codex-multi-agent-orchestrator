@@ -14,16 +14,18 @@ from typing import Iterable
 from rollout_reader import SessionSummary, parse_session_summary, parse_ts
 
 ROLE_PROFILES = {
-    "scout": ("gpt-5.6-luna", "medium", "v2", True),
-    "worker_terra": ("gpt-5.6-terra", "high", "v2", True),
-    "controller_sol": ("gpt-5.6-sol", "medium", "v2", False),
-    "expert": ("gpt-5.6-sol", "high", "v2", True),
+    "scout": ("gpt-6-luna", "medium", "v2", True),
+    "worker_luna": ("gpt-6-luna", "high", "v2", True),
+    "worker_sol": ("gpt-6-sol", "high", "v2", True),
+    "controller_sol": ("gpt-6-sol", "medium", "v2", False),
+    "expert": ("gpt-6-sol", "xhigh", "v2", True),
     "controller_astra": ("gpt-6-astra", "high", "v2", False),
 }
 EXPECT_CHOICES = (
     "root",
     "scout",
-    "worker_terra",
+    "worker_luna",
+    "worker_sol",
     "controller_sol",
     "controller_sol_scout",
     "controller_astra",
@@ -98,7 +100,7 @@ def validate_profile(
         issues.append("turn_context が見つかりません")
 
     if is_root:
-        expected = ("gpt-5.6-luna", "medium", "v2")
+        expected = ("gpt-6-luna", "medium", "v2")
         actual = (record.model, record.reasoning_effort, record.multi_agent_version)
         labels = ("model", "effort", "multi_agent_version")
         for label, exp, got in zip(labels, expected, actual):
@@ -178,9 +180,12 @@ def shape_issues(
     elif expect == "scout":
         if roles != ["scout"]:
             issues.append(f"期待: Root -> scout、実際のRoot child: {roles}")
-    elif expect == "worker_terra":
-        if roles != ["worker_terra"]:
-            issues.append(f"期待: Root -> worker_terra、実際のRoot child: {roles}")
+    elif expect == "worker_luna":
+        if roles != ["worker_luna"]:
+            issues.append(f"期待: Root -> worker_luna、実際のRoot child: {roles}")
+    elif expect == "worker_sol":
+        if roles != ["worker_sol"]:
+            issues.append(f"期待: Root -> worker_sol、実際のRoot child: {roles}")
     elif expect == "controller_sol":
         if roles != ["controller_sol"]:
             issues.append(f"期待: Root -> controller_sol、実際のRoot child: {roles}")

@@ -30,7 +30,7 @@ agentは起動しないでください。ファイル変更、実装、詳細調
 python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("o") --expect root
 ```
 
-期待: `ROOT` は `gpt-5.6-luna / medium / v2`。
+期待: `ROOT` は `gpt-6-luna / medium / v2`。
 
 ### Luna Scout
 
@@ -53,26 +53,28 @@ ROOT
 └─ scout
 ```
 
-### Terra Worker
+### Luna Worker
 
 ```text
 Multi-Agent Smoke Testです。
 
-Rootは worker_terra agent を1体だけ起動してください。Root自身ではタスクを処理しないでください。
-worker_terraは他のagentを起動せず、read-onlyでこのrepositoryのトップレベル構成を簡単に確認し、WORKER_TERRA_SMOKE_OKを含む結果をRootへ返してください。
+Rootは worker_luna agent を1体だけ起動してください。Root自身ではタスクを処理しないでください。
+worker_lunaは他のagentを起動せず、read-onlyでこのrepositoryのトップレベル構成を簡単に確認し、WORKER_LUNA_SMOKE_OKを含む結果をRootへ返してください。
 ファイル変更、実装、詳細調査は不要です。不要なagentは起動しないでください。
 ```
 
 ```powershell
-python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("o") --expect worker_terra
+python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("o") --expect worker_luna
 ```
 
 期待:
 
 ```text
-ROOT                gpt-5.6-luna  medium  v2
-└─ worker_terra     gpt-5.6-terra high    v2
+ROOT                gpt-6-luna  medium  v2
+└─ worker_luna      gpt-6-luna  high    v2
 ```
+
+`worker_sol` は `--expect worker_sol` で確認します。期待値は `gpt-6-sol / high / v2` です。
 
 ### Sol Controller
 
@@ -114,9 +116,9 @@ Codex Multi-Agent Smoke Test
 rollout数    : 3
 期待配線      : controller_sol_scout
 
-[OK] ROOT | gpt-5.6-luna / medium / v2
-└─ [OK] controller_sol | gpt-5.6-sol / medium / v2
-   └─ [OK] scout | gpt-5.6-luna / medium / v2
+[OK] ROOT | gpt-6-luna / medium / v2
+└─ [OK] controller_sol | gpt-6-sol / medium / v2
+   └─ [OK] scout | gpt-6-luna / medium / v2
 
 RESULT: PASS
 実効model / effort / Multi-Agent runtime / role配線は期待値と一致しています。
@@ -153,7 +155,7 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" `
 期待:
 
 ```text
-[OK] ROOT | gpt-5.6-luna / medium / v2
+[OK] ROOT | gpt-6-luna / medium / v2
 └─ [OK] controller_astra | gpt-6-astra / high / v2
 
 RESULT: PASS
@@ -171,11 +173,12 @@ RESULT: PASS
 |---|---|---|---|
 | Direct | 「次の文章を短くして」またはpath・値・確認項目が完全指定された単一設定の確認 | `DIRECT_LUNA` | 未知の場所を探索した場合はDirect成立条件違反。Worker/Controller起動はover-routing。 |
 | Scout | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `SCOUT_LUNA` | 書込み・実装はoverreach。Directで根拠不足の結論はunder-routing。 |
-| Worker | 「この明白なbugを指定fileで修正し、対象testを通して」 | `WORKER_TERRA` | Directが設計判断や広い調査を抱えるのはunder-routing。Sol/Astraは根拠なきover-routing。 |
+| Worker | 「この明白なbugを指定fileで修正し、対象testを通して」 | `WORKER_LUNA` | Directが挙動変更を抱えるのはunder-routing。Sol/Astraは根拠なきover-routing。 |
+| 難しい既知の実装 | 「対象moduleと受入条件が明確な非自明の修正をして」 | `WORKER_SOL` | 広い設計判断が核心ならControllerへ移す。 |
 | Sol | 「複数moduleで原因不明の回帰を診断し、選択肢を統合して修正して」 | `CONTROLLER_SOL` | Workerが未解消の複数module不確実性を推測で閉じるのはunder-routing。Astraは高risk根拠なしならover-routing。 |
 | Astra | 「security-sensitiveな破壊的migrationの設計判断を、失敗影響付きで検討して」 | `CONTROLLER_ASTRA` | Sol以下で重大riskを推測で処理するのはunder-routing。実際に低riskならAstraはover-routing。 |
-| 明示Terra | ComposerでTerraを選択するか「Terraで実装して」と指定 | `WORKER_TERRA` | Luna自動判定へ戻す、または同tier Workerを重複起動する。 |
-| 明示Sol | ComposerでSolを選択するか「Solで調査して」と指定 | `CONTROLLER_SOL` | Scout/Workerへ降格する、または同tier Controllerを重複起動する。 |
+| 明示Sol Worker | 「worker_solで実装して」と指定 | `WORKER_SOL` | Luna自動判定へ戻す、または同じ役割のWorkerを重複起動する。 |
+| 明示Sol Controller | 「controller_solで調査して」と指定 | `CONTROLLER_SOL` | Scout/Workerへ降格する、または同じ役割のControllerを重複起動する。 |
 | 明示Astra | ComposerでAstraを選択するか「Astraで判断して」と指定 | `CONTROLLER_ASTRA` | 自動判定で下位Routeへ変更する、または同tier Controllerを重複起動する。 |
 
 ### 実施例
@@ -194,7 +197,7 @@ python "$env:USERPROFILE\.codex\metrics\report.py" `
 
 `--context` は `token_count.info.model_context_window` と `last_token_usage.total_tokens` から、実効window、最後の使用量、session内peak、各使用率を表示します。累積 `total_token_usage` はコスト計測用で context 使用率には使いません。欠損は model/effort/配線の PASS/FAIL を変えない非致命の警告です。`--json` の session 項目には `context_window`、`context_tokens`、`context_peak_tokens`、`context_usage_pct`、`context_peak_usage_pct`（不明は `null`）を常に含めます。
 
-Guardian / Review / Compact / Auto Review 等の内部補助 session（例: `codex-auto-review / low / disabled`）は通常 Root ではありません。通常 Root と ThreadSpawn された `scout`、`worker_terra`、`controller_sol`、`expert`、`controller_astra` だけを検証対象にし、内部 session は `--table` で参考表示するだけです。
+Guardian / Review / Compact / Auto Review 等の内部補助 session（例: `codex-auto-review / low / disabled`）は通常 Root ではありません。通常 Root と ThreadSpawn された `scout`、`worker_luna`、`worker_sol`、`controller_sol`、`expert`、`controller_astra` だけを検証対象にし、内部 session は `--table` で参考表示するだけです。
 
 ## options と結果
 
@@ -209,7 +212,7 @@ Guardian / Review / Compact / Auto Review 等の内部補助 session（例: `cod
 | `--json` | JSON 出力 | OFF |
 | `--expect NAME` | 期待 tree を厳密検証 | 未指定 |
 
-`--expect`: `root`、`scout`、`worker_terra`、`controller_sol`、`controller_sol_scout`、`controller_astra`。
+`--expect`: `root`、`scout`、`worker_luna`、`worker_sol`、`controller_sol`、`controller_sol_scout`、`controller_astra`。
 
 | exit code | 意味 |
 |---:|---|

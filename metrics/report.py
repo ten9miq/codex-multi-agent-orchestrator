@@ -430,6 +430,13 @@ def main() -> int:
     else:
         print("  Rootタスクなし")
     print("  ※ costはweight未設定のtaskを除いた平均です。")
+    unclassified_luna = sum(
+        row.get("model") == "gpt-6-luna"
+        and route_value(row, "initial_route") == "UNKNOWN"
+        and not row.get("subagent_count")
+        for row in roots
+    )
+    print(f"  GPT-6 Luna Rootのツール使用・agentなし（Route要確認）: {unclassified_luna}件")
 
     print("\n■ 検証結果（Root）")
     verification_rows = []
@@ -522,20 +529,26 @@ def main() -> int:
     print("\n".join(render_table(["項目", "平均", "中央値", "P90", "最大"], result_rows, right_columns={1, 2, 3, 4})))
     print("  ※ USER_RESULTがない既存rolloutは0として扱います。")
 
-    terra = [row for row in roots if route_value(row, "initial_route") == "WORKER_TERRA"]
-    sol = [row for row in roots if route_value(row, "initial_route") == "CONTROLLER_SOL"]
-    terra_sol = sum((row.get("escalation_count", 0) or 0) >= 1 for row in terra)
-    sol_astra = sum(effective_route(row) == "CONTROLLER_ASTRA" for row in sol)
+    luna_worker = [row for row in roots if route_value(row, "initial_route") == "WORKER_LUNA"]
+    sol_worker = [row for row in roots if route_value(row, "initial_route") == "WORKER_SOL"]
+    sol_controller = [row for row in roots if route_value(row, "initial_route") == "CONTROLLER_SOL"]
+    luna_sol = sum((row.get("escalation_count", 0) or 0) >= 1 for row in luna_worker)
+    worker_controller = sum(effective_route(row) == "CONTROLLER_SOL" for row in sol_worker)
+    sol_astra = sum(effective_route(row) == "CONTROLLER_ASTRA" for row in sol_controller)
     escalated = sum((row.get("escalation_count", 0) or 0) >= 1 for row in roots)
 
     print("\n■ 昇格")
     print(
-        f"  Terra → Sol                  {fmt_pct(pct(terra_sol, len(terra))):>10}"
-        f"  ({terra_sol}/{len(terra)})"
+        f"  Luna Worker → Sol            {fmt_pct(pct(luna_sol, len(luna_worker))):>10}"
+        f"  ({luna_sol}/{len(luna_worker)})"
     )
     print(
-        f"  Sol → Astra                  {fmt_pct(pct(sol_astra, len(sol))):>10}"
-        f"  ({sol_astra}/{len(sol)})"
+        f"  Sol Worker → Controller      {fmt_pct(pct(worker_controller, len(sol_worker))):>10}"
+        f"  ({worker_controller}/{len(sol_worker)})"
+    )
+    print(
+        f"  Sol Controller → Astra       {fmt_pct(pct(sol_astra, len(sol_controller))):>10}"
+        f"  ({sol_astra}/{len(sol_controller)})"
     )
     print(
         f"  全Rootで昇格あり             {fmt_pct(pct(escalated, len(roots))):>10}"

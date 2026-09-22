@@ -1,6 +1,6 @@
 # Rootで常時使うモデル。routingと軽微なDirect処理を担当する。
 # 未指定時: Codexのmodel catalog / account default。config loaderに固定model値はない。
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 # Rootの推論 effort。Rootを薄いRouterとして保ち、固定コストを抑える。
 # 未指定時: 選択modelのcatalog default（Lunaのcatalog defaultはmedium）。
 model_reasoning_effort = "medium"
@@ -54,7 +54,7 @@ max_wait_timeout_ms = 1500000
 [agents]
 # agent_typeを省略したgeneric spawnのfallback model。named roleは各sectionで上書きする。
 # 未指定時: spawn元のparent modelを継承（config fieldは未設定）。
-default_subagent_model = "gpt-5.6-luna"
+default_subagent_model = "gpt-6-luna"
 # generic spawnのfallback reasoning effort。
 # 未指定時: spawn元のparent effortを継承（config fieldは未設定）。
 default_subagent_reasoning_effort = "medium"
@@ -70,13 +70,18 @@ description = "read-heavyなrepository探索を担当し、ファイルを変更
 # 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/scout.toml"
 
-[agents.worker_terra]
-# 明確なscopeの通常実装を担当するTerra High Worker。
+[agents.worker_luna]
+# 明確なscopeの通常実装を担当するGPT-6 Luna High Worker。
 # 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
-description = "通常の明確にscopeされた実装を担当する主要Worker。"
+description = "通常の明確にscopeされた実装を担当するGPT-6 Luna High Worker。"
 # Worker固有のmodel/effort、検証、結果形式を定義するrole file。
 # 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
-config_file = "agents/worker-terra.toml"
+config_file = "agents/worker-luna.toml"
+
+[agents.worker_sol]
+# 難しいが境界の明確な実装を担当するGPT-6 Sol High Worker。
+description = "難しいがscopeと受入条件が明確な実装を担当するGPT-6 Sol High Worker。"
+config_file = "agents/worker-sol.toml"
 
 [agents.controller_sol]
 # 複数module、未知の原因、設計判断を統合するSol Controller。
@@ -87,7 +92,7 @@ description = "非自明なdebug、複数module、設計判断を統合するCon
 config_file = "agents/controller-sol.toml"
 
 [agents.expert]
-# Sol配下で使う難しい局所分析・correctness review用のLeaf。
+# Controller配下で使うSol XHighの局所分析・correctness review用のLeaf。
 # 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
 description = "難しい局所分析、correctness、security、reviewを担当するHigh-effort specialist。"
 # Expert固有のread-only方針と結果形式を定義するrole file。
