@@ -35,32 +35,64 @@ function Get-MergedConfigText {
     )
 
     $managedKeyPattern = '^\s*(?:' + (($managedTopLevelKeys | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\s*='
-    $remaining = New-Object System.Collections.Generic.List[string]
+    $remainingTopLevel = New-Object System.Collections.Generic.List[string]
+    $remainingSections = New-Object System.Collections.Generic.List[string]
+    $pendingTopLevelComments = New-Object System.Collections.Generic.List[string]
     $currentSection = ''
 
     foreach ($line in ($ExistingText -split "`r?`n")) {
         $sectionMatch = [regex]::Match($line, '^\s*\[([^]]+)\]\s*$')
         if ($sectionMatch.Success) {
             $currentSection = $sectionMatch.Groups[1].Value
+            $pendingTopLevelComments.Clear()
         }
 
         $managedSection = $currentSection -match '^(?:features(?:\.|$)|agents(?:\.|$))'
-        if ($line -match $managedKeyPattern -and $currentSection -eq '') {
+        if ($currentSection -eq '') {
+            $isCommentOrBlank = [string]::IsNullOrWhiteSpace($line) -or $line.TrimStart().StartsWith('#')
+            if ($isCommentOrBlank) {
+                [void]$pendingTopLevelComments.Add($line)
+                continue
+            }
+            if ($line -match $managedKeyPattern) {
+                $pendingTopLevelComments.Clear()
+                continue
+            }
+            foreach ($pendingLine in $pendingTopLevelComments) {
+                [void]$remainingTopLevel.Add($pendingLine)
+            }
+            $pendingTopLevelComments.Clear()
+            [void]$remainingTopLevel.Add($line)
             continue
         }
-        if ($managedSection) {
-            continue
+        if (-not $managedSection) {
+            [void]$remainingSections.Add($line)
         }
-        [void]$remaining.Add($line)
     }
 
     $templateLines = $TemplateText -split "`r?`n"
     $mergedLines = New-Object System.Collections.Generic.List[string]
+    $insertedTopLevel = $false
     foreach ($line in $templateLines) {
+        $isSection = $line -match '^\s*\['
+        if ($isSection -and -not $insertedTopLevel) {
+            foreach ($topLevelLine in $remainingTopLevel) {
+                [void]$mergedLines.Add($topLevelLine)
+            }
+            if ($remainingTopLevel.Count -gt 0) {
+                [void]$mergedLines.Add('')
+            }
+            $insertedTopLevel = $true
+        }
         [void]$mergedLines.Add($line)
     }
+    if (-not $insertedTopLevel) {
+        foreach ($topLevelLine in $remainingTopLevel) {
+            [void]$mergedLines.Add($topLevelLine)
+        }
+    }
     [void]$mergedLines.Add('')
-    foreach ($line in $remaining) {
+    foreach ($line in $remainingSections) {
         [void]$mergedLines.Add($line)
     }
     return (($mergedLines -join "`r`n").TrimEnd() + "`r`n")
