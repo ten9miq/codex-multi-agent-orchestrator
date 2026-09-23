@@ -78,14 +78,8 @@ def user_message(text: str) -> dict:
 
 
 class ContextObservabilityTests(unittest.TestCase):
-    def test_explicit_root_models_map_directly_to_their_routes(self) -> None:
-        cases = {
-            "gpt-5.6-terra": "WORKER_TERRA",
-            "gpt-5.6-sol": "CONTROLLER_SOL",
-            "gpt-6-sol": "CONTROLLER_SOL",
-            "gpt-6-astra": "CONTROLLER_ASTRA",
-        }
-        for model, expected_route in cases.items():
+    def test_root_model_alone_does_not_prove_a_route(self) -> None:
+        for model in ("gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-sol", "gpt-6-astra", "gpt-6-luna"):
             with self.subTest(model=model):
                 values = rollout_values(include_context=False)
                 values[1]["payload"]["model"] = model
@@ -94,9 +88,11 @@ class ContextObservabilityTests(unittest.TestCase):
                     write_rollout(path, values)
                     turn = parse_rollout_turns(path)[0]
 
-                self.assertEqual(turn.initial_route, expected_route)
-                self.assertEqual(turn.final_route, expected_route)
-                self.assertEqual(turn.route_source, "model")
+                self.assertEqual(turn.model, model)
+                self.assertEqual(turn.initial_route, "UNKNOWN")
+                self.assertEqual(turn.final_route, "UNKNOWN")
+                self.assertIsNone(turn.initial_route_source)
+                self.assertIsNone(turn.final_route_source)
 
     def test_consecutive_root_turn_rework_classes_preserve_legacy_boolean(self) -> None:
         cases = [
@@ -247,15 +243,33 @@ class ContextObservabilityTests(unittest.TestCase):
         self.assertEqual(turn.status_source, "completion_event")
         self.assertIsNone(turn.verification_source)
         self.assertEqual(turn.final_route, "UNKNOWN")
-        self.assertEqual(turn.route_source, "model")
+        self.assertIsNone(turn.route_source)
 
-    def test_gpt6_luna_without_tools_remains_direct_candidate(self) -> None:
+    def test_gpt6_luna_without_tools_has_unobserved_route(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "rollout-direct.jsonl"
             write_rollout(path, rollout_values(include_context=False))
             turn = parse_rollout_turns(path)[0]
 
-        self.assertEqual(turn.initial_route, "DIRECT_LUNA")
+        self.assertEqual(turn.initial_route, "UNKNOWN")
+
+    def test_spawned_child_role_does_not_become_root_route(self) -> None:
+        values = rollout_values(include_context=False)
+        values.insert(3, {
+            "type": "response_item",
+            "payload": {"type": "function_call", "name": "spawn_agent",
+                        "call_id": "spawn-1", "arguments": json.dumps({"agent_type": "worker_sol"})},
+        })
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-spawn.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.subagent_count, 1)
+        self.assertEqual(turn.initial_route, "UNKNOWN")
+        self.assertEqual(turn.final_route, "UNKNOWN")
+        self.assertIsNone(turn.initial_route_source)
+        self.assertIsNone(turn.final_route_source)
 
     def test_protocol_provenance_prefers_task_complete_last_agent_message(self) -> None:
         values = rollout_values(include_context=False)
@@ -280,6 +294,8 @@ class ContextObservabilityTests(unittest.TestCase):
         self.assertEqual(turn.verification_source, "task_complete.last_agent_message")
         self.assertEqual(turn.retry_source, "task_complete.last_agent_message")
         self.assertEqual(turn.route_source, "task_complete.last_agent_message")
+        self.assertIsNone(turn.initial_route_source)
+        self.assertEqual(turn.final_route_source, "task_complete.last_agent_message")
 
     def test_protocol_can_use_last_assistant_message_without_completion_event(self) -> None:
         values = rollout_values(include_context=False)
@@ -300,6 +316,8 @@ class ContextObservabilityTests(unittest.TestCase):
         self.assertEqual(turn.status_source, "assistant_message")
         self.assertEqual(turn.verification_source, "assistant_message")
         self.assertEqual(turn.route_source, "assistant_message")
+        self.assertIsNone(turn.initial_route_source)
+        self.assertEqual(turn.final_route_source, "assistant_message")
         self.assertEqual(turn.retry_source, "assistant_message")
 
     def test_completion_event_fallback_does_not_override_protocol_status(self) -> None:

@@ -154,6 +154,22 @@ def load_weights(path: Path) -> dict[str, dict[str, float]]:
         return {}
 
 
+def rate_as_of(path: Path) -> str:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8")).get("as_of")
+        return value if isinstance(value, str) and value else "不明"
+    except (OSError, ValueError, AttributeError):
+        return "不明"
+
+
+def rate_unit(path: Path) -> str | None:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8")).get("unit")
+        return value if isinstance(value, str) else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def weighted_cost(row: dict[str, Any], weights: dict[str, dict[str, float]]) -> float | None:
     w = weights.get(row.get("model", ""))
     if not isinstance(w, dict):
@@ -256,7 +272,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--weights",
         type=Path,
         default=default_metrics / "cost-weights.json",
-        help="重み付きコスト設定JSON。既定: ~/.codex/metrics/cost-weights.json",
+        help="API USD換算の参考単価JSON。既定: ~/.codex/metrics/cost-weights.json",
+    )
+    parser.add_argument(
+        "--credit-rates",
+        type=Path,
+        default=default_metrics / "codex-credit-rates.json",
+        help="Codex Standard速度の追加クレジット参考単価JSON",
     )
     return parser
 
@@ -293,6 +315,8 @@ def main() -> int:
     rows = [row for row in rows if is_in_period(row)]
     roots = [row for row in rows if row.get("is_root")]
     weights = load_weights(args.weights)
+    credit_rates = load_weights(args.credit_rates)
+    api_cost_label = "API USD換算の推計" if rate_unit(args.weights) == "usd_per_million_tokens" else "重み付き参考値"
 
     print(f"Codex ルーティングレポート（{period_label}）")
     print(f"対象期間（UTC、終了を含まない） {since.isoformat()} ～ {until.isoformat()}")
@@ -324,10 +348,12 @@ def main() -> int:
         key = (str(root.get("root_thread_id") or root.get("thread_id") or ""), str(root.get("root_turn_id") or root.get("turn_id") or ""))
         group = task_groups.get(key, [root])
         costs = [weighted_cost(item, weights) for item in group]
+        credits = [weighted_cost(item, credit_rates) for item in group]
         task_summaries.append({
             "root": root,
             "total_tokens": sum(int(item.get("total_tokens", 0) or 0) for item in group),
-            "cost": sum(value for value in costs if value is not None) if any(value is not None for value in costs) else None,
+            "cost": sum(costs) if all(value is not None for value in costs) else None,
+            "credits": sum(credits) if all(value is not None for value in credits) else None,
         })
 
     routes = Counter(route_value(row, "initial_route") for row in roots)
@@ -338,17 +364,17 @@ def main() -> int:
     else:
         print("  Rootタスクなし")
 
-    route_sources = Counter(provenance_value(row, "route_source") for row in roots)
+    route_sources = Counter(provenance_value(row, "initial_route_source") for row in roots)
     inferred_direct = sum(
         route_value(row, "initial_route") == "DIRECT_LUNA"
-        and provenance_value(row, "route_source") == "model"
+        and provenance_value(row, "initial_route_source") in {"model", "UNKNOWN"}
         for row in roots
     )
-    print("\n■ Route判定の出所（Root）")
+    print("\n■ 初期Route判定の出所（Root）")
     for source, count in route_sources.most_common():
         print(f"  {source:<28} {count:>8,}")
     print(f"  model推定のDIRECT_LUNA      {inferred_direct:>8,}")
-    print("  ※ model推定のDIRECT_LUNAは、Luna Rootがそのturnでagentを起動しなかったことを示し、明示的なDirect選択を証明しません。")
+    print("  ※ 旧Metricsのmodel推定DIRECT_LUNAは、明示的なDirect選択を証明しません。")
 
     completed = sum(row.get("status") == "COMPLETE" for row in roots)
     first = sum(bool(row.get("first_pass_success")) for row in roots)
@@ -407,6 +433,7 @@ def main() -> int:
     for route, tasks in sorted(by_route.items(), key=lambda item: (-len(item[1]), item[0])):
         roots_for_route = [task["root"] for task in tasks]
         costs = [float(task["cost"]) for task in tasks if task["cost"] is not None]
+        credits = [float(task["credits"]) for task in tasks if task["credits"] is not None]
         totals = [int(task["total_tokens"]) for task in tasks]
         route_rows.append([
             route,
@@ -420,23 +447,23 @@ def main() -> int:
             fmt_i(statistics.mean(totals) if totals else 0),
             fmt_i(p90(totals)),
             mean_or_dash(costs),
+            mean_or_dash(credits),
         ])
     if route_rows:
         print("\n".join(render_table(
-            ["初期Route", "Root turn数", "完了", "初回", "旧手戻り", "追加要求", "モデル訂正", "不明", "平均token", "P90", "平均cost"],
+            ["初期Route", "Root turn数", "完了", "初回", "旧手戻り", "追加要求", "モデル訂正", "不明", "平均token", "P90", "平均" + api_cost_label, "平均Codex credit推計"],
             route_rows,
-            right_columns={1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+            right_columns={1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
         )))
     else:
         print("  Rootタスクなし")
-    print("  ※ costはweight未設定のtaskを除いた平均です。")
-    unclassified_luna = sum(
-        row.get("model") == "gpt-6-luna"
-        and route_value(row, "initial_route") == "UNKNOWN"
+    print("  ※ モデル単価が全turnで判明したtaskだけの平均です。Codex credit推計はプラン内利用枠の消費を示しません。")
+    unclassified_root = sum(
+        route_value(row, "initial_route") == "UNKNOWN"
         and not row.get("subagent_count")
         for row in roots
     )
-    print(f"  GPT-6 Luna Rootのツール使用・agentなし（Route要確認）: {unclassified_luna}件")
+    print(f"  Route不明・agent起動なしのRoot（要確認）: {unclassified_root}件")
 
     print("\n■ 検証結果（Root）")
     verification_rows = []
@@ -763,21 +790,35 @@ def main() -> int:
         costs = [weighted_cost(row, weights) for row in rows]
         costs = [cost for cost in costs if cost is not None]
         if costs:
-            print("\n■ 重み付きコスト")
-            print(f"  合計                         {sum(costs):>12.4f}")
+            print(f"\n■ {api_cost_label}" + ("（Standard短文脈単価）" if api_cost_label.startswith("API") else ""))
+            print(f"  既知モデルturnの小計          {sum(costs):>12.4f}")
+            print(f"  算定対象turn                {len(costs):>12,}/{len(rows):,}")
             task_costs: list[float] = []
             for group in task_groups.values():
                 values = [weighted_cost(row, weights) for row in group]
                 values = [value for value in values if value is not None]
-                if values:
+                if values and len(values) == len(group):
                     task_costs.append(sum(values))
             if task_costs:
                 print(f"  タスク平均                   {statistics.mean(task_costs):>12.4f}")
             print(f"  weight設定                   {args.weights}")
-            print("  ※ API料金やCodex subscription creditそのものではなく、設定した相対weightです。")
+            print(f"  単価確認日                   {rate_as_of(args.weights)}")
+            print("  ※ 設定した単価による参考値です。実際のAPI請求額やCodex利用枠の消費ではありません。")
     else:
-        print("\n■ 重み付きコスト")
+        print(f"\n■ {api_cost_label}")
         print("  無効です。cost-weights.json にモデル別weightを設定すると表示されます。")
+
+    print("\n■ Codex追加クレジット換算の推計（Standard速度）")
+    credit_values = [weighted_cost(row, credit_rates) for row in rows]
+    known_credits = [value for value in credit_values if value is not None]
+    if known_credits:
+        print(f"  既知モデルturnの小計          {sum(known_credits):>12.4f}")
+        print(f"  算定対象turn                {len(known_credits):>12,}/{len(rows):,}")
+        print(f"  rate設定                    {args.credit_rates}")
+        print(f"  単価確認日                   {rate_as_of(args.credit_rates)}")
+        print("  ※ 追加クレジット単価による参考値です。プラン内利用枠の減少量や請求額ではありません。")
+    else:
+        print("  算定できるモデルturnがありません。")
 
     return 0
 

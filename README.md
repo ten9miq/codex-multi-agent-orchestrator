@@ -135,10 +135,11 @@ MetricsのSource of Truthは、モデルの自己申告ではなく次のrollout
 
 - `smoke.py`: 配線、実効model/effort/V2、context観測
 - `collect.py`: rolloutからturn単位Metricsを生成
-- `report.py`: 期間集計、完遂率、昇格率、token、返却結果サイズを表示
+- `report.py`: 期間集計、完遂率、昇格率、token、API USD換算とCodex追加クレジット換算の参考値を表示
 - `timeline.py`: session → turn → agentの時系列表示
 
 Metricsは設定を自動変更しません。変更前後、token cost、完遂率、rollback条件を記録し、人間が判断します。
+追加クレジット換算はプラン内利用枠の減少量を表しません。自然言語でのRoute判定とSol Workerのeffort比較は[Routing回帰確認](metrics/docs/ROUTING-EVAL.md)に記載します。
 
 ## Smoke Testの基本
 

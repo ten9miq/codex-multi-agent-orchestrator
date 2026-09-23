@@ -217,6 +217,20 @@ class ReportTests(unittest.TestCase):
         self.assertIn("Context window 分布", rendered)
         self.assertIn("Compaction", rendered)
         self.assertIn("Codex ルーティングレポート（直近 30 日）", rendered)
+        self.assertIn("重み付き参考値", rendered)
+        self.assertIn("Codex追加クレジット換算の推計", rendered)
+
+    def test_codex_credit_rates_are_distinct_from_api_usd_weights(self) -> None:
+        base = Path(__file__).parent
+        api = report.load_weights(base / "cost-weights.json")
+        credits = report.load_weights(base / "codex-credit-rates.json")
+        row = {"model": "gpt-6-sol", "input_tokens": 1_000_000,
+               "cached_input_tokens": 0, "output_tokens": 1_000_000}
+        self.assertEqual(report.weighted_cost(row, api), 12)
+        self.assertEqual(report.weighted_cost(row, credits), 300)
+        row["model"] = "gpt-5.6-sol"
+        self.assertEqual(report.weighted_cost(row, api), 24)
+        self.assertEqual(report.weighted_cost(row, credits), 600)
 
 
 if __name__ == "__main__":

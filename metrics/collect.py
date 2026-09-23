@@ -10,8 +10,8 @@ from pathlib import Path
 
 from rollout_reader import Turn, parse_rollout_turns, parse_ts
 
-# 連続Root turnの手戻り分類を追加したため、旧cue cacheは再利用しない。
-VERSION = 6
+# モデル名によるRoot Route推定を廃止し、Route出所を分離したため再解析する。
+VERSION = 7
 
 
 def attach_root_tasks(turns: list[Turn]) -> None:
