@@ -10,8 +10,8 @@ from pathlib import Path
 
 from rollout_reader import Turn, parse_rollout_turns, parse_ts
 
-# モデル名によるRoot Route推定を廃止し、Route出所を分離したため再解析する。
-VERSION = 7
+# first_spawn_roleを既存rolloutから再解析して公開する。
+VERSION = 8
 
 
 def attach_root_tasks(turns: list[Turn]) -> None:

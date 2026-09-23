@@ -2,7 +2,7 @@
 
 ## 目的
 
-通常時はGPT-6 Luna MediumをRoot Routerとして使い、明確な通常実装はLuna High Worker、難しい既知の実装はSol High Worker、設計判断の統合はSol Controller、最難関はAstra Controllerへ送ります。Composerまたは依頼本文でmodel・roleが明示された場合はその指定を優先します。
+通常時はGPT-6 Luna MediumをRoot Routerとして使い、明確な通常実装はLuna High Worker、難しい既知の実装はSol Medium Worker、設計判断の統合はSol Controller、最難関はAstra Controllerへ送ります。Composerまたは依頼本文でmodel・roleが明示された場合はその指定を優先します。
 
 最適化対象はtoken数だけではありません。
 
@@ -25,18 +25,18 @@ flowchart TD
     R -->|"極小・明白"| D["DIRECT_LUNA<br/>Luna Medium"]
     R -->|"read-heavy探索"| S["SCOUT_LUNA<br/>Luna Scout / Leaf"]
     R -->|"通常実装"| W["WORKER_LUNA<br/>Luna High / Leaf"]
-    R -->|"難しい既知の実装"| SW["WORKER_SOL<br/>Sol High / Leaf"]
+    R -->|"難しい既知の実装"| SW["WORKER_SOL<br/>Sol Medium / Leaf"]
     R -->|"複雑"| C["CONTROLLER_SOL<br/>Sol Medium"]
     R -->|"最難関・高リスク"| A["CONTROLLER_ASTRA<br/>Astra High"]
 
     C --> CS["Luna Scout / Leaf"]
     C --> CW["Luna High Worker / Leaf"]
-    C --> SCW["Sol High Worker / Leaf"]
+    C --> SCW["Sol Medium Worker / Leaf"]
     C --> CE["Sol XHigh Expert / Leaf"]
 
     A --> AS["Luna Scout / Leaf"]
     A --> AW["Luna High Worker / Leaf"]
-    A --> ASW["Sol High Worker / Leaf"]
+    A --> ASW["Sol Medium Worker / Leaf"]
     A --> AE["Sol XHigh Expert / Leaf"]
 ```
 
@@ -45,7 +45,7 @@ Root: Luna Medium / V2
 ├─ Direct: Luna Medium
 ├─ Scout: Luna Medium / Leaf
 ├─ Worker: Luna High / Leaf
-├─ Difficult Worker: Sol High / Leaf
+├─ Difficult Worker: Sol Medium / Leaf
 ├─ Sol Controller: Sol Medium
 │  ├─ Scout
 │  ├─ Worker
@@ -67,7 +67,7 @@ Luna Rootは最終成果物、探索の必要性、scope、不確実性、risk�
 | `DIRECT_LUNA` | Luna Root | 対象・場所・操作が既知で、探索・複数証拠の照合・原因分析・挙動変更がすべて不要 | 条件をすべて満たす場合だけ。agent起動コストで緩和しない |
 | `SCOUT_LUNA` | Luna Scout | 未知の事実・現在状態・根拠をrepository、設定、履歴、log、文書から取得するread-only調査 | 小規模でもDirectへ下げない。難しい因果・設計判断はSolへ |
 | `WORKER_LUNA` | Luna High Worker | scopeと受入条件が明確な通常変更、bug fix、test、局所refactor | 限定的な事前確認は自身で行う。難しい中核判断はSolへ昇格 |
-| `WORKER_SOL` | Sol High Worker | 難しいが責務・受入条件が明確な既知の変更 | 未知のroot causeや複数制約の統合はSol Controllerへ、最難関riskはAstraへ |
+| `WORKER_SOL` | Sol Medium Worker | 難しいが責務・受入条件が明確な既知の変更 | 未知のroot causeや複数制約の統合はSol Controllerへ、最難関riskはAstraへ |
 | `CONTROLLER_SOL` | Sol Medium | 複数module、原因不明、調査結果の解釈、設計判断、非自明なrefactor/API移行 | read-onlyでも難しい原因・設計判断を含む。独立するLeaf作業だけを委譲 |
 | `CONTROLLER_ASTRA` | Astra High | Solで解消できない重要な不確実性を持つ高失敗コストの問題 | 高コストの予防利用はしない |
 

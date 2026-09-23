@@ -2,7 +2,7 @@
 
 ## RootをLuna Mediumにする
 
-Rootは全turnで呼ばれるため、GPT-6 Luna Mediumを使います。通常実装はLuna High Worker、難しい既知の実装はSol High Worker、設計統合はSol Controller、最難関はAstra Controllerが担当します。
+Rootは全turnで呼ばれるため、GPT-6 Luna Mediumを使います。通常実装はLuna High Worker、難しい既知の実装はSol Medium Worker、設計統合はSol Controller、最難関はAstra Controllerが担当します。
 
 ## 通常実装はLuna High Workerにする
 
@@ -10,7 +10,7 @@ Rootは全turnで呼ばれるため、GPT-6 Luna Mediumを使います。通常�
 
 ## effortの順次試行をしない
 
-Luna Medium、Luna High、Sol High、Sol XHigh、Astraを毎回順に試すと不要なagent起動と再作業が生じます。依頼時点の証拠で適切なRouteを選び、核心の不確実性が判明した場合だけ昇格します。Sol XHigh ExpertはController配下の難しい局所分析・レビューに限定します。
+Luna Medium、Luna High、Sol Medium、Sol XHigh、Astraを毎回順に試すと不要なagent起動と再作業が生じます。依頼時点の証拠で適切なRouteを選び、核心の不確実性が判明した場合だけ昇格します。Sol XHigh ExpertはController配下の難しい局所分析・レビューに限定します。
 
 ## Leafの再委譲を禁止する
 

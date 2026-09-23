@@ -266,10 +266,39 @@ class ContextObservabilityTests(unittest.TestCase):
             turn = parse_rollout_turns(path)[0]
 
         self.assertEqual(turn.subagent_count, 1)
+        self.assertEqual(turn.first_spawn_role, "worker_sol")
         self.assertEqual(turn.initial_route, "UNKNOWN")
         self.assertEqual(turn.final_route, "UNKNOWN")
         self.assertIsNone(turn.initial_route_source)
         self.assertIsNone(turn.final_route_source)
+
+    def test_first_spawn_role_uses_first_known_named_role(self) -> None:
+        values = rollout_values(include_context=False)
+        values[3:3] = [
+            {
+                "type": "response_item",
+                "payload": {"type": "function_call", "name": "spawn_agent",
+                            "call_id": "spawn-unknown", "arguments": json.dumps({"agent_type": "custom"})},
+            },
+            {
+                "type": "response_item",
+                "payload": {"type": "function_call", "name": "spawn_agent",
+                            "call_id": "spawn-known-1", "arguments": json.dumps({"agent_type": "scout"})},
+            },
+            {
+                "type": "response_item",
+                "payload": {"type": "function_call", "name": "spawn_agent",
+                            "call_id": "spawn-known-2", "arguments": json.dumps({"agent_type": "worker_sol"})},
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-first-spawn.jsonl"
+            write_rollout(path, values)
+            turn = parse_rollout_turns(path)[0]
+
+        self.assertEqual(turn.first_spawn_role, "scout")
+        self.assertEqual(turn.initial_route, "UNKNOWN")
+        self.assertEqual(turn.final_route, "UNKNOWN")
 
     def test_protocol_provenance_prefers_task_complete_last_agent_message(self) -> None:
         values = rollout_values(include_context=False)

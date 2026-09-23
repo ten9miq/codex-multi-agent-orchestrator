@@ -11,6 +11,7 @@
 | `is_root` | Root か |
 | `agent_role` | `scout` / `worker_luna` / `worker_sol` 等の role |
 | `route` / `initial_route` / `final_route` / `effective_route` | 互換用の最終 Route / 最初の Route / 最終 Route / レポートで用いる実効 Route。`effective_route` は `final_route` の後方互換 alias。 |
+| `first_spawn_role` | 当該turnのrolloutで最初に観測した、既知のnamed `spawn_agent.agent_type`。該当なしは`null`。実行の観測値であり、Rootが選択したRouteや初期意図の証拠には使わない。 |
 | `model` / `reasoning_effort` / `multi_agent_version` | 実効 model、effort、V1/V2 |
 | `execution_mode` | `ORCHESTRATED_ROUTE` はV2/agent role/protocol Routeを観測できたturn、`LEGACY_ROOT_MODEL` は旧名称の互換値。これだけではRouteを判定しない。旧JSONLでfieldがなければreportは`UNKNOWN`。 |
 | `input_tokens` / `cached_input_tokens` / `output_tokens` / `reasoning_tokens` / `total_tokens` | turn の token 内訳 |

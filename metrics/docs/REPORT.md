@@ -41,6 +41,7 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 |---|---|
 | 冒頭 | `対象期間` はUTCに正規化した半開区間。`Root turn数` は Root 行数、`ユニークRoot thread/session数` は同じ会話内の複数turnを重複計上しない数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
 | 初期ルート | Root の `initial_route` 分布。Root がなければその旨を表示。 |
+| 最初に観測したnamed spawn role | Root turnごとの`first_spawn_role`分布。未観測は`UNKNOWN`と表示する。Route別の集計や`initial_route`/`final_route`の推定には使わない。 |
 | 初期Route判定の出所 | `initial_route_source`別の件数と、旧Metricsでモデルから推定された`DIRECT_LUNA`件数を表示する。現行解析はモデル名やtool未使用だけではRouteを推定しない。spawnされたroleはRoot自身の初期意図の証明ではない。 |
 | 実行モード | `ORCHESTRATED_ROUTE` と `LEGACY_ROOT_MODEL` を分ける。旧Metricsでfieldがなければ`UNKNOWN`であり、legacyと断定しない。 |
 | Route別 品質・task使用量 | 初期RouteごとのRoot turn数を分母に、完了率、初回完遂率、手戻り候補率、cue分類率、Rootと帰属subagentを合算した平均/P90 token、平均API USD推計と平均Codex追加クレジット推計を表示する。 |

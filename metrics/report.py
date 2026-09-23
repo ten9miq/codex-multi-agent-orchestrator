@@ -364,6 +364,14 @@ def main() -> int:
     else:
         print("  Rootタスクなし")
 
+    spawn_roles = Counter(
+        str(row.get("first_spawn_role") or "UNKNOWN") for row in roots
+    )
+    print("\n■ 最初に観測したnamed spawn role（Root）")
+    for role, count in spawn_roles.most_common():
+        print(f"  {role:<28} {count:>8,}")
+    print("  ※ spawn roleは実行の観測値であり、Rootの初期Routeを示しません。")
+
     route_sources = Counter(provenance_value(row, "initial_route_source") for row in roots)
     inferred_direct = sum(
         route_value(row, "initial_route") == "DIRECT_LUNA"

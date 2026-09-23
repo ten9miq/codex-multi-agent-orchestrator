@@ -48,6 +48,7 @@ python "$env:USERPROFILE\.codex\metrics\timeline.py" --minutes 30 --show-tokens
 - Metrics は観測専用です。設定を自動変更しないため、変更前後・token cost・完遂率・rollback 条件を記録して人間が判断します。
 - token は JSONL 中の全値を単純加算せず、live turn の使用量、cumulative snapshot の重複、親子帰属を処理します。
 - machine-readable な field 名は互換性のため英語のまま固定です。
+- `first_spawn_role` はRoot turnで最初に観測した既知のnamed spawn roleです。選択された`initial_route`とは独立に集計し、Routeの推定には使いません。
 - API USD換算とCodex追加クレジット換算は別の推計です。どちらもCodexのプラン内利用枠の減少量や請求額を表しません。料金表の日付・出典・速度条件は各JSONに記録します。
 - `rework_class` は連続Root turnの次発話を `NONE` / `USER_FOLLOWUP` / `MODEL_CORRECTION` / `UNKNOWN` に控えめに分類します。`possible_immediate_rework` は互換用の旧heuristicです。
 

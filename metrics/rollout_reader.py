@@ -530,6 +530,8 @@ class Turn:
     route: str = "UNKNOWN"
     initial_route: str = "UNKNOWN"
     final_route: str = "UNKNOWN"
+    # rollout内で最初に観測した既知のnamed spawn role。選択Routeの推定には使わない。
+    first_spawn_role: str | None = None
     # final_route の後方互換 alias。レポートでは「実効 Route」として表示する。
     effective_route: str = "UNKNOWN"
     model: str = ""
@@ -636,6 +638,9 @@ class Turn:
             self.route_source = source
 
     def finalize(self) -> None:
+        self.first_spawn_role = next(
+            (role for role in self._spawn_roles if role in ROUTE_BY_ROLE), None
+        )
         # 文字数はUTF-8 tokenizerに依存しない安定した近似値として保存する。
         self.result_estimated_tokens = (self.result_chars + 3) // 4
         self.user_result_estimated_tokens = (self.user_result_chars + 3) // 4
