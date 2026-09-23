@@ -62,22 +62,22 @@ flowchart TD
     R -->|"極小・明白"| D["DIRECT_LUNA<br/>Luna Medium"]
     R -->|"read-heavy探索"| S["SCOUT_LUNA<br/>Luna Scout / Leaf"]
     R -->|"通常実装"| W["WORKER_LUNA<br/>Luna High / Leaf"]
-    R -->|"難しい既知の実装"| SW["WORKER_SOL<br/>Sol High / Leaf"]
+    R -->|"難しい既知の実装"| SW["WORKER_SOL<br/>Sol Medium / Leaf"]
     R -->|"複雑"| C["CONTROLLER_SOL<br/>Sol Medium"]
     R -->|"最難関・高リスク"| A["CONTROLLER_ASTRA<br/>Astra High"]
 
     C --> CS["Luna Scout / Leaf"]
     C --> CW["Luna High Worker / Leaf"]
-    C --> SCW["Sol High Worker / Leaf"]
+    C --> SCW["Sol Medium Worker / Leaf"]
     C --> CE["Sol XHigh Expert / Leaf"]
 
     A --> AS["Luna Scout / Leaf"]
     A --> AW["Luna High Worker / Leaf"]
-    A --> ASW["Sol High Worker / Leaf"]
+    A --> ASW["Sol Medium Worker / Leaf"]
     A --> AE["Sol XHigh Expert / Leaf"]
 ```
 
-Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装は`Luna Medium Root → Luna High Worker`で直接処理し、難しい既知の実装はSol High Workerへ送ります。LeafはScout、Luna/Sol Worker、Sol XHigh Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
+Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装は`Luna Medium Root → Luna High Worker`で直接処理し、難しい既知の実装はSol Medium Workerへ送ります。LeafはScout、Luna/Sol Worker、Sol XHigh Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
 
 ## Routing判定表
 
@@ -92,7 +92,7 @@ Luna Rootは最終成果物、探索の必要性、変更scope、不確実性、
 | 原因不明、複数制約の統合、難しい調査結果の解釈 | `CONTROLLER_SOL` | 非自明refactor、API移行、複数module、read-onlyの設計分析 | 作業量だけが大きい、または狭く既知な実装 |
 | 高失敗コストで、Solでも重要な不確実性が残る | `CONTROLLER_ASTRA` | concurrency、distributed state、security-sensitive、破壊的migration | 予防的な高性能化、通常の調査・実装 |
 
-過少routingを避けるため、未知の対象探索、複数証拠の照合、原因切り分け、設計・実装方針の選択をDirectで行いません。GPT-6 Lunaの能力向上は通常Workerの担当範囲に反映し、Directの条件は緩めません。調査規模が小さいことやagent起動オーバーヘッドはDirectへ下げる理由になりません。最終成果物が明確な変更ならScoutを儀式的に挟まずWorkerへ直接送り、依頼時点の証拠でLuna HighとSol Highを選びます。下位effortを毎回順番に試す方式にはしません。
+過少routingを避けるため、未知の対象探索、複数証拠の照合、原因切り分け、設計・実装方針の選択をDirectで行いません。GPT-6 Lunaの能力向上は通常Workerの担当範囲に反映し、Directの条件は緩めません。調査規模が小さいことやagent起動オーバーヘッドはDirectへ下げる理由になりません。最終成果物が明確な変更ならScoutを儀式的に挟まずWorkerへ直接送り、依頼時点の証拠でLuna HighとSol Mediumを選びます。下位effortを毎回順番に試す方式にはしません。
 
 ## Contextと結果の扱い
 

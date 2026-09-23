@@ -20,7 +20,7 @@ Composerで選択されたRoot model、またはユーザーが依頼本文で�
 | 明示指定 | 初期Route | 実行方法 |
 |---|---|---|
 | `worker_luna` | `WORKER_LUNA` | `gpt-6-luna` / highで範囲が明確な実装を担当する。 |
-| `worker_sol` | `WORKER_SOL` | `gpt-6-sol` / highで難しいが境界が明確な実装を担当する。 |
+| `worker_sol` | `WORKER_SOL` | `gpt-6-sol` / mediumで難しいが境界が明確な実装を担当する。 |
 | `controller_sol` | `CONTROLLER_SOL` | `gpt-6-sol` / mediumで複数制約の判断・統合を担当する。 |
 | `gpt-6-astra` / Astra / `controller_astra` | `CONTROLLER_ASTRA` | Astra Root自身、または `controller_astra` が実行する。 |
 
@@ -30,7 +30,7 @@ RootがLunaで、Sol・Astra・特定roleの明示指定がない場合だけ、
 
 1. **最終成果物を分類する。** 説明、調査、変更のどれが目的かを先に決める。
 2. **探索の必要性を判定する。** 未知のfile、symbol、設定場所、実行経路、log、履歴、文書から事実を得る必要があれば、Direct候補から外す。
-3. **変更と不確実性を判定する。** scopeと受入条件が明確な通常変更はLuna High Worker、難しいが境界が明確な変更はSol High Worker、原因・設計境界・相反する制約が不明ならSol Controller、高い失敗コストまたはSolで解消できない重要な不確実性があるならAstraとする。
+3. **変更と不確実性を判定する。** scopeと受入条件が明確な通常変更はLuna High Worker、難しいが境界が明確な変更はSol Medium Worker、原因・設計境界・相反する制約が不明ならSol Controller、高い失敗コストまたはSolで解消できない重要な不確実性があるならAstraとする。
 4. **コストは最後に評価する。** routeの成立条件を満たした候補間でのみ、agent起動・context transfer・待機コストを比較する。
 
 | Route | 選択条件 | 境界 |
@@ -44,7 +44,7 @@ RootがLunaで、Sol・Astra・特定roleの明示指定がない場合だけ、
 
 **過少・過剰routingの抑制:** `rg`やfile listingによる対象探索、symbol/call path/設定元の特定、複数file・document・log・履歴の照合、現行版と過去版の比較、原因候補の切り分け、実装・設計方針の選択が必要ならDirectを選ばない。一方、明白な小変更を「念のため」Controllerへ送らず、scopeが明確な変更はWorkerへ直接送る。同じtierのControllerを二重起動せず、同一問題を複数agentに重複投入しない。
 
-GPT-6 Lunaの能力向上は `WORKER_LUNA` の担当範囲に反映する。`DIRECT_LUNA` の成立条件は緩めない。Luna Medium → Luna High → Sol High → Sol XHigh → Astraを毎回順番に試す方式にはせず、依頼時点の証拠に合うRouteを選ぶ。Sol XHighの`expert`はController配下で局所的な分析・レビューが必要な場合に限る。
+GPT-6 Lunaの能力向上は `WORKER_LUNA` の担当範囲に反映する。`DIRECT_LUNA` の成立条件は緩めない。Luna Medium → Luna High → Sol Medium → Sol XHigh → Astraを毎回順番に試す方式にはせず、依頼時点の証拠に合うRouteを選ぶ。Sol XHighの`expert`はController配下で局所的な分析・レビューが必要な場合に限る。
 
 **実行中の昇格:** Luna Workerは調査後に広いarchitecture判断、曖昧なroot cause、または担当範囲を超える難しいcorrectness判断が核心だと分かったときだけ `ESCALATE_SOL` を返す。Sol Workerは未知のroot causeや複数制約の統合が核心になったら `ESCALATE_SOL` を返し、RootがSol Controllerへ移す。Sol WorkerとSol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` を返す。情報・権限・外部依存が不足して安全に進められない場合は、推測で埋めず `BLOCKED` を返す。失敗したテスト、未達の受入条件、未解消の根本原因は `COMPLETE` にしない。
 

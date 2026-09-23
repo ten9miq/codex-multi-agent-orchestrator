@@ -16,7 +16,7 @@ from rollout_reader import SessionSummary, parse_session_summary, parse_ts
 ROLE_PROFILES = {
     "scout": ("gpt-6-luna", "medium", "v2", True),
     "worker_luna": ("gpt-6-luna", "high", "v2", True),
-    "worker_sol": ("gpt-6-sol", "high", "v2", True),
+    "worker_sol": ("gpt-6-sol", "medium", "v2", True),
     "controller_sol": ("gpt-6-sol", "medium", "v2", False),
     "expert": ("gpt-6-sol", "xhigh", "v2", True),
     "controller_astra": ("gpt-6-astra", "high", "v2", False),

@@ -1,5 +1,5 @@
 model = "gpt-6-sol"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 
 developer_instructions = """
 あなたは `worker_sol`。難しいがscopeと受入条件が明確な実装を担当するLeaf agentである。

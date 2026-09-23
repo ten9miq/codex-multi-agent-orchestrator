@@ -79,8 +79,8 @@ description = "通常の明確にscopeされた実装を担当するGPT-6 Luna H
 config_file = "agents/worker-luna.toml"
 
 [agents.worker_sol]
-# 難しいが境界の明確な実装を担当するGPT-6 Sol High Worker。
-description = "難しいがscopeと受入条件が明確な実装を担当するGPT-6 Sol High Worker。"
+# 難しいが境界の明確な実装を担当するGPT-6 Sol Medium Worker。
+description = "難しいがscopeと受入条件が明確な実装を担当するGPT-6 Sol Medium Worker。"
 config_file = "agents/worker-sol.toml"
 
 [agents.controller_sol]

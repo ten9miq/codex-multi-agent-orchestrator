@@ -74,7 +74,7 @@ ROOT                gpt-6-luna  medium  v2
 └─ worker_luna      gpt-6-luna  high    v2
 ```
 
-`worker_sol` は `--expect worker_sol` で確認します。期待値は `gpt-6-sol / high / v2` です。
+`worker_sol` は `--expect worker_sol` で確認します。期待値は `gpt-6-sol / medium / v2` です。
 
 ### Sol Controller
 
