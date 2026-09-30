@@ -1,5 +1,6 @@
 model = "gpt-6-luna"
 model_reasoning_effort = "high"
+service_tier = "fast"
 
 developer_instructions = """
 あなたは `worker_luna`。scopeと受入条件が明確な通常実装を担当するLeaf agentである。

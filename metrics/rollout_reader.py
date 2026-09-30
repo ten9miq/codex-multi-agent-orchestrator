@@ -415,6 +415,17 @@ def iter_jsonl(path: Path, stats: JsonlStats | None = None) -> Iterator[dict[str
                 yield obj
 
 
+def normalize_service_tier(value: Any) -> str:
+    """rolloutの実効service_tierを比較用に正規化する。欠損は推測しない。"""
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"priority", "fast"}:
+            return "fast"
+        if normalized in {"default", "standard"}:
+            return "standard"
+    return "UNKNOWN"
+
+
 @dataclass
 class SessionSummary:
     path: str
@@ -425,6 +436,7 @@ class SessionSummary:
     is_child: bool = False
     model: str = ""
     reasoning_effort: str = ""
+    service_tier: str = "UNKNOWN"
     multi_agent_version: str = ""
     first_timestamp: str = ""
     last_timestamp: str = ""
@@ -446,6 +458,7 @@ def parse_session_summary(path: Path) -> SessionSummary:
     task_name: str | None = None
     model = ""
     effort = ""
+    service_tier = "UNKNOWN"
     mav = ""
     first_timestamp = ""
     last_timestamp = ""
@@ -477,6 +490,7 @@ def parse_session_summary(path: Path) -> SessionSummary:
             value = first_key(payload, "effort") or first_key(payload, "reasoning_effort")
             if isinstance(value, str):
                 effort = value
+            service_tier = normalize_service_tier(first_key(payload, "service_tier"))
             value = first_key(payload, "multi_agent_version")
             if isinstance(value, str):
                 mav = value
@@ -503,6 +517,7 @@ def parse_session_summary(path: Path) -> SessionSummary:
         is_child=is_child,
         model=model,
         reasoning_effort=effort,
+        service_tier=service_tier,
         multi_agent_version=mav,
         first_timestamp=first_timestamp,
         last_timestamp=last_timestamp,
@@ -536,6 +551,7 @@ class Turn:
     effective_route: str = "UNKNOWN"
     model: str = ""
     reasoning_effort: str = ""
+    service_tier: str = "UNKNOWN"
     multi_agent_version: str = ""
     execution_mode: str = "LEGACY_ROOT_MODEL"
     input_tokens: int = 0
@@ -716,6 +732,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
     parent: str | None = None
     latest_model = ""
     latest_effort = ""
+    latest_service_tier = "UNKNOWN"
     latest_mav = ""
     turns: list[Turn] = []
     current: Turn | None = None
@@ -739,6 +756,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
             value = first_key(payload, "effort") or first_key(payload, "reasoning_effort")
             if isinstance(value, str):
                 latest_effort = value
+            latest_service_tier = normalize_service_tier(first_key(payload, "service_tier"))
             value = first_key(payload, "multi_agent_version")
             if isinstance(value, str):
                 latest_mav = value
@@ -784,6 +802,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
                 agent_role=role,
                 model=latest_model,
                 reasoning_effort=latest_effort,
+                service_tier=latest_service_tier,
                 multi_agent_version=latest_mav,
                 user_rework_class=pending_user_rework_class,
                 user_legacy_rework_cue=pending_user_legacy_rework_cue,
@@ -822,6 +841,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
         if typ == "turn_context":
             current.model = latest_model or current.model
             current.reasoning_effort = latest_effort or current.reasoning_effort
+            current.service_tier = latest_service_tier
             current.multi_agent_version = latest_mav or current.multi_agent_version
 
         for name, call_id, args in extract_tool_calls(obj):

@@ -1,5 +1,6 @@
 # 旧構成の記録用。現行config.tomlからは登録されず、自動ルーティングでは使用しない。
 model = "gpt-5.6-terra"
+service_tier = "default"
 model_reasoning_effort = "high"
 
 developer_instructions = """

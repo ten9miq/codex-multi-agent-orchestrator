@@ -22,7 +22,7 @@ def rollout_values(*, include_context: bool = True) -> list[dict]:
         {"type": "session_meta", "payload": {"id": "root-a", "source": {}}},
         {
             "type": "turn_context",
-            "payload": {"model": "gpt-6-luna", "effort": "medium", "multi_agent_version": "v2"},
+            "payload": {"model": "gpt-6-luna", "effort": "medium", "multi_agent_version": "v2", "service_tier": "priority"},
         },
         {
             "type": "event_msg",
@@ -78,6 +78,32 @@ def user_message(text: str) -> dict:
 
 
 class ContextObservabilityTests(unittest.TestCase):
+    def test_service_tier_is_observed_and_missing_tier_fails_smoke(self) -> None:
+        values = rollout_values(include_context=False)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout-tier.jsonl"
+            write_rollout(path, values)
+            self.assertEqual(parse_session_summary(path).service_tier, "fast")
+            self.assertEqual(parse_rollout_turns(path)[0].service_tier, "fast")
+            self.assertEqual(smoke.validate_profile(parse_session_summary(path), is_root=True, depth=0, child_count=0), [])
+            values[1]["payload"].pop("service_tier")
+            write_rollout(path, values)
+            self.assertEqual(parse_rollout_turns(path)[0].service_tier, "UNKNOWN")
+            self.assertTrue(any("service_tier" in issue for issue in smoke.validate_profile(
+                parse_session_summary(path), is_root=True, depth=0, child_count=0)))
+
+    def test_child_profiles_compare_their_own_speed(self) -> None:
+        from rollout_reader import SessionSummary
+        for role, (model, effort, mav, tier, _) in smoke.ROLE_PROFILES.items():
+            record = SessionSummary(path="fixture", session_id=role, agent_role=role,
+                                    is_child=True, model=model, reasoning_effort=effort,
+                                    multi_agent_version=mav, service_tier=tier,
+                                    turn_context_count=1)
+            self.assertEqual(smoke.validate_profile(record, is_root=False, depth=1, child_count=0), [])
+            record.service_tier = "fast" if tier == "standard" else "standard"
+            self.assertTrue(any("service_tier" in issue for issue in smoke.validate_profile(
+                record, is_root=False, depth=1, child_count=0)))
+
     def test_root_model_alone_does_not_prove_a_route(self) -> None:
         for model in ("gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-sol", "gpt-6-astra", "gpt-6-luna"):
             with self.subTest(model=model):

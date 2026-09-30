@@ -42,7 +42,7 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" --minutes 30 --table
 
 ### `turn_context` がない
 
-`! turn_context が見つかりません` は model / effort / V1/V2 を実ログから確認できない状態です。`smoke.py` は警告し、PASS にしません。
+`! turn_context が見つかりません` または `service_tier` の不一致は model / effort / 速度 / V1/V2 を実ログから確認できない状態です。`smoke.py` は警告し、PASS にしません。
 
 ### Smoke Test が複数 Root を拾う
 

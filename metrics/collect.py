@@ -10,8 +10,8 @@ from pathlib import Path
 
 from rollout_reader import Turn, parse_rollout_turns, parse_ts
 
-# first_spawn_roleを既存rolloutから再解析して公開する。
-VERSION = 8
+# service_tierを既存rolloutから再解析して公開する。
+VERSION = 9
 
 
 def attach_root_tasks(turns: list[Turn]) -> None:

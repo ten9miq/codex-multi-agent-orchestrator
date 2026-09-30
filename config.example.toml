@@ -13,11 +13,13 @@ model_context_window = 872000
 # 応答スタイル。Routerの判断と結果統合を簡潔・実務的にする。
 # 未指定時: personalityなし（組み込みのCodex指示を使用）。
 personality = "pragmatic"
-# 処理tier。速度優先のfast/priorityへ変更せず、標準tierを使う。
+# Root・Scout・Workerを含むLuna系はFast。Sol系とAstraは各agentファイルでStandardを明示する。
 # 未指定時: auto（backend/project設定に応じてtierを選択）。
-service_tier = "default"
+service_tier = "fast"
 
 [features]
+# Fastを選択する機能を有効化。各agentの速度はservice_tierで指定する。
+fast_mode = true
 # Multi-Agent機能全体の有効化。
 # 未指定時: false相当（Multi-Agentを明示的に有効化しない）。
 multi_agent = true
@@ -79,14 +81,14 @@ description = "通常の明確にscopeされた実装を担当するGPT-6 Luna H
 config_file = "agents/worker-luna.toml"
 
 [agents.worker_sol]
-# 難しいが境界の明確な実装を担当するGPT-6 Sol Medium Worker。
-description = "難しいがscopeと受入条件が明確な実装を担当するGPT-6 Sol Medium Worker。"
+# 難しいが境界の明確な実装を担当するGPT-6.1 Sol High Worker。
+description = "難しいがscopeと受入条件が明確な実装を担当するGPT-6.1 Sol High Worker。"
 config_file = "agents/worker-sol.toml"
 
 [agents.controller_sol]
-# 複数module、未知の原因、設計判断を統合するSol Controller。
+# Direct以外の通常依頼を受ける主担当。必要時だけLeafへ委譲する。
 # 未指定時: descriptionなし（role名だけでは追加指示を読み込まない）。
-description = "非自明なdebug、複数module、設計判断を統合するController。"
+description = "調査・判断・実装・検証を完遂するGPT-6.1 Sol Highの標準Controller。"
 # Solの委譲ルール、Leaf選択、escalation protocolを定義するrole file。
 # 未指定時: role固有設定なし（parentのmodel/effortとgeneric設定を使用）。
 config_file = "agents/controller-sol.toml"

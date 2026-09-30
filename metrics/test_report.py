@@ -170,6 +170,8 @@ class ReportTests(unittest.TestCase):
                 "gpt-5.6-terra": {"input": 2, "cached_input": 0.2, "output": 4},
             }
         }
+        for row in rows:
+            row["service_tier"] = "standard"
         with tempfile.TemporaryDirectory() as temp:
             temp_path = Path(temp)
             input_path = temp_path / "metrics.jsonl"
@@ -224,13 +226,28 @@ class ReportTests(unittest.TestCase):
         base = Path(__file__).parent
         api = report.load_weights(base / "cost-weights.json")
         credits = report.load_weights(base / "codex-credit-rates.json")
-        row = {"model": "gpt-6-sol", "input_tokens": 1_000_000,
+        row = {"model": "gpt-6-sol", "service_tier": "standard", "input_tokens": 1_000_000,
                "cached_input_tokens": 0, "output_tokens": 1_000_000}
         self.assertEqual(report.weighted_cost(row, api), 12)
         self.assertEqual(report.weighted_cost(row, credits), 300)
         row["model"] = "gpt-5.6-sol"
         self.assertEqual(report.weighted_cost(row, api), 24)
         self.assertEqual(report.weighted_cost(row, credits), 600)
+
+    def test_gpt_61_sol_speed_and_unknown_pricing(self) -> None:
+        base = Path(__file__).parent
+        api = report.load_weights(base / "cost-weights.json")
+        credits = report.load_weights(base / "codex-credit-rates.json")
+        row = {"model": "gpt-6.1-sol", "service_tier": "priority",
+               "input_tokens": 1_000_000, "cached_input_tokens": 500_000,
+               "output_tokens": 1_000_000, "reasoning_tokens": 250_000}
+        self.assertEqual(report.weighted_cost(row, api), 22.1)
+        self.assertEqual(report.weighted_cost(row, credits), 552.5)
+        row["service_tier"] = "standard"
+        self.assertEqual(report.weighted_cost(row, api), 11.05)
+        row.pop("service_tier")
+        self.assertIsNone(report.weighted_cost(row, api))
+        self.assertIsNone(report.weighted_cost(row, credits))
 
 
 if __name__ == "__main__":

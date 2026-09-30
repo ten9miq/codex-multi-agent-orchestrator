@@ -30,7 +30,7 @@ agentは起動しないでください。ファイル変更、実装、詳細調
 python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("o") --expect root
 ```
 
-期待: `ROOT` は `gpt-6-luna / medium / v2`。
+期待: `ROOT` は `gpt-6-luna / medium / v2 / fast`。
 
 ### Luna Scout
 
@@ -70,11 +70,11 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("
 期待:
 
 ```text
-ROOT                gpt-6-luna  medium  v2
-└─ worker_luna      gpt-6-luna  high    v2
+ROOT                gpt-6-luna  medium  v2  fast
+└─ worker_luna      gpt-6-luna  high    v2  fast
 ```
 
-`worker_sol` は `--expect worker_sol` で確認します。期待値は `gpt-6-sol / medium / v2` です。
+`worker_sol` は `--expect worker_sol` で確認します。期待値は `gpt-6.1-sol / high / v2 / standard` です。
 
 ### Sol Controller
 
@@ -116,12 +116,12 @@ Codex Multi-Agent Smoke Test
 rollout数    : 3
 期待配線      : controller_sol_scout
 
-[OK] ROOT | gpt-6-luna / medium / v2
-└─ [OK] controller_sol | gpt-6-sol / medium / v2
-   └─ [OK] scout | gpt-6-luna / medium / v2
+[OK] ROOT | gpt-6-luna / medium / v2 / fast
+└─ [OK] controller_sol | gpt-6.1-sol / high / v2 / standard
+   └─ [OK] scout | gpt-6-luna / medium / v2 / fast
 
 RESULT: PASS
-実効model / effort / Multi-Agent runtime / role配線は期待値と一致しています。
+実効model / effort / service_tier / Multi-Agent runtime / role配線は期待値と一致しています。
 ```
 
 ### Astra Controller
@@ -155,8 +155,8 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" `
 期待:
 
 ```text
-[OK] ROOT | gpt-6-luna / medium / v2
-└─ [OK] controller_astra | gpt-6-astra / high / v2
+[OK] ROOT | gpt-6-luna / medium / v2 / fast
+└─ [OK] controller_astra | gpt-6-astra / high / v2 / standard
 
 RESULT: PASS
 ```
@@ -165,17 +165,18 @@ RESULT: PASS
 
 ## 配線Smoke Testと自動Routing Testを混同しない
 
-上のSmoke Testは、promptで**指定した**role、model、effort、treeが実効化されるかを`smoke.py --expect`で確認する配線検証である。Rootが依頼内容から適切なrouteを選べること、またはtoken効率を証明するテストではない。
+上のSmoke Testは、promptで**指定した**role、model、effort、service_tier、treeが実効化されるかを`smoke.py --expect`で確認する配線検証である。合成fixtureでのunit testは解析ロジックの確認であり、実際のchild速度override成功の証明ではない。実効値の確認には設定適用後の新しいrolloutが必要。Rootが依頼内容から適切なrouteを選べること、またはtoken効率を証明するテストではない。
 
 自動Routing Testは、agent名を指定せず、固定した自然言語ケースを新規sessionで一件ずつ実行する運用評価である。開始時刻をケースごとに記録し、`collect.py`と`report.py`で実際の`initial_route`、完了、初回完遂、手戻り、token、subagent数を確認する。現在のMetricsは受動解析であり、期待routeとの突合や設定の自動変更は行わない。
 
 | ケース | promptの要旨 | 期待する最小route | 観測上の失敗 |
 |---|---|---|---|
-| Direct | 「次の文章を短くして」またはpath・値・確認項目が完全指定された単一設定の確認 | `DIRECT_LUNA` | 未知の場所を探索した場合はDirect成立条件違反。Worker/Controller起動はover-routing。 |
-| Scout | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `SCOUT_LUNA` | 書込み・実装はoverreach。Directで根拠不足の結論はunder-routing。 |
-| Worker | 「この明白なbugを指定fileで修正し、対象testを通して」 | `WORKER_LUNA` | Directが挙動変更を抱えるのはunder-routing。Sol/Astraは根拠なきover-routing。 |
-| 難しい既知の実装 | 「対象moduleと受入条件が明確な非自明の修正をして」 | `WORKER_SOL` | 広い設計判断が核心ならControllerへ移す。 |
-| Sol | 「複数moduleで原因不明の回帰を診断し、選択肢を統合して修正して」 | `CONTROLLER_SOL` | Workerが未解消の複数module不確実性を推測で閉じるのはunder-routing。Astraは高risk根拠なしならover-routing。 |
+| Direct | 「次の文章を短くして」など会話内の情報だけで完結する単純な変換 | `DIRECT_LUNA` | 外部参照・tool・ファイル操作・内容判断が必要ならDirect成立条件違反。 |
+| 事実探索 | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `CONTROLLER_SOL` | RootがDirectまたはScoutを自動初期Routeに選んだら不一致。 |
+| 小変更 | 「指定fileのtypoを修正して」 | `CONTROLLER_SOL` | 実ファイルの確認・編集が必要。 |
+| 明白なbug修正 | 「この明白なbugを指定fileで修正し、対象testを通して」 | `CONTROLLER_SOL` | 挙動変更と検証が必要。 |
+| 難しい既知の実装 | 「対象moduleと受入条件が明確な非自明の修正をして」 | `CONTROLLER_SOL` | 必要なら独立したLeaf作業だけを切り出す。 |
+| 原因不明の回帰 | 「複数moduleで原因不明の回帰を診断し、選択肢を統合して修正して」 | `CONTROLLER_SOL` | Astraは高riskの具体的根拠がある場合だけ。 |
 | Astra | 「security-sensitiveな破壊的migrationの設計判断を、失敗影響付きで検討して」 | `CONTROLLER_ASTRA` | Sol以下で重大riskを推測で処理するのはunder-routing。実際に低riskならAstraはover-routing。 |
 | 明示Sol Worker | 「worker_solで実装して」と指定 | `WORKER_SOL` | Luna自動判定へ戻す、または同じ役割のWorkerを重複起動する。 |
 | 明示Sol Controller | 「controller_solで調査して」と指定 | `CONTROLLER_SOL` | Scout/Workerへ降格する、または同じ役割のControllerを重複起動する。 |
@@ -220,4 +221,4 @@ Guardian / Review / Compact / Auto Review 等の内部補助 session（例: `cod
 | `1` | rollout は読めたが設定・配線に警告あり |
 | `2` | sessions/rollout がないなど、テスト自体を実行できない |
 
-`turn_context` がない警告は model / effort / V1/V2 を実ログから確認できない状態であり、PASS にはなりません。
+`turn_context` または `service_tier` がない警告は model / effort / 速度 / V1/V2 を実ログから確認できない状態であり、PASS にはなりません。未知のtierも同様です。

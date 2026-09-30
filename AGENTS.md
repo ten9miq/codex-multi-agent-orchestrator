@@ -11,80 +11,70 @@
 
 # Routing
 
-通常のRootは `gpt-6-luna` / `medium` / Multi-Agent V2 とする。Luna Rootは自動Routerとして、各ユーザー要求について実作業前に一度だけ初期routeを選ぶ。
+通常のRootは `gpt-6-luna` / `medium` / Fast / Multi-Agent V2 とする。Rootは依頼の分類、task packetの構築、結果の配送、必要な昇格の受付を担当する。依頼内容の調査、原因分析、解決方針の設計を委譲前に始めない。
 
 ## 明示model・role指定
 
-Composerで選択されたRoot model、またはユーザーが依頼本文で明示したmodel・roleを、Lunaによる自動判定より優先する。
+Composerで選択されたRoot model、またはユーザーが依頼本文で明示したmodel・roleを自動判定より優先する。
 
-| 明示指定 | 初期Route | 実行方法 |
+| 明示指定 | Route | 実行方法 |
 |---|---|---|
-| `worker_luna` | `WORKER_LUNA` | `gpt-6-luna` / highで範囲が明確な実装を担当する。 |
-| `worker_sol` | `WORKER_SOL` | `gpt-6-sol` / mediumで難しいが境界が明確な実装を担当する。 |
-| `controller_sol` | `CONTROLLER_SOL` | `gpt-6-sol` / mediumで複数制約の判断・統合を担当する。 |
-| `gpt-6-astra` / Astra / `controller_astra` | `CONTROLLER_ASTRA` | Astra Root自身、または `controller_astra` が実行する。 |
+| `scout` | `SCOUT_LUNA` | GPT-6 Luna / medium / Fastによるread-only Leaf。 |
+| `worker_luna` | `WORKER_LUNA` | GPT-6 Luna / high / Fastによる範囲が明確な実装Leaf。 |
+| `worker_sol` | `WORKER_SOL` | GPT-6.1 Sol / high / Standardによる独立実装Leaf。 |
+| `gpt-6.1-sol` / Sol / `controller_sol` | `CONTROLLER_SOL` | GPT-6.1 Sol / high / Standardの主担当。 |
+| `gpt-6-astra` / Astra / `controller_astra` | `CONTROLLER_ASTRA` | 高失敗コストの問題を担当するAstra / high / Standard。 |
 
-Composerまたは依頼本文でモデルが明示された場合はそのモデルを優先し、作業形態（Worker / Controller）は依頼の範囲で決める。Root自身が適合するモデルで動作している場合、同じ役割のagentを重複起動しない。明示指定が「このmodelだけ」などと限定されていなければ、必要な昇格条件は適用できる。`read-only`、調査のみ、実装禁止などの指定は操作範囲を制限するが、明示されたmodel・roleを下位routeへ変更する理由にはしない。
+明示されたモデルを優先し、Worker / Controllerの形態は依頼の範囲で決める。Root自身が適合するモデル・役割で動作している場合、同じ役割のagentを重複起動しない。read-only、調査のみ、実装禁止などの指定は操作範囲を制約する。別モデルや特定roleの明示指定がないLuna Rootだけが以下の自動routingを行う。
 
-RootがLunaで、Sol・Astra・特定roleの明示指定がない場合だけ、次の自動ルーティングを行う。
+## 自動routing
 
-1. **最終成果物を分類する。** 作業手段を表す「調査」「読み取り」などの語より、求められる成果物が事実の列挙・現状整理、原因の解釈・対処方針、変更のどれかを先に決める。
-2. **探索の必要性を判定する。** 未知のfile、symbol、設定場所、実行経路、log、履歴、文書から事実を得る必要があれば、Direct候補から外す。
-3. **変更と不確実性を判定する。** scopeと受入条件が明確な通常変更はLuna High Worker、難しいが境界が明確な変更はSol Medium Worker、原因・設計境界・相反する制約が不明ならSol Controller、高い失敗コストまたはSolで解消できない重要な不確実性があるならAstraとする。
-4. **コストは最後に評価する。** routeの成立条件を満たした候補間でのみ、agent起動・context transfer・待機コストを比較する。
-
-**初期Routeの確認:** 選択前に内部的に「最終成果物／Directの除外条件／選択Route」を短く確認する。未知の事実の探索、複数証拠の照合、原因の解釈、対処方針の選択、挙動変更のいずれかが必要、または依頼時点で不要と判断できないなら、`DIRECT_LUNA` を選ばない。`SCOUT_LUNA` は事実収集・現状整理で成果物が完結する場合に限る。ログやコードから原因を組み立て、対処方法を検討する依頼は、変更なしでも `CONTROLLER_SOL` を候補にする。単に「調査」「提案」という語があるだけでは上位Routeを選ばず、必要な判断の内容で決める。
-
-**境界例:** 「ログのエラー行と時刻を列挙して」は `SCOUT_LUNA`、「ログとコードから原因を調べ、対処法を検討して」は `CONTROLLER_SOL`。「場所と修正内容を指定した誤字を直して」は `DIRECT_LUNA`、「設定箇所を探して値を教えて」は `SCOUT_LUNA`。
+実作業前に一度だけ、最終成果物、Directの除外条件、選択Routeを内部的に短く確認する。分類以外の内容判断、未知の事実の探索、複数証拠の照合、変更、検証が必要なら `CONTROLLER_SOL` へ渡す。必要性を判断できない場合もSolへ渡す。
 
 | Route | 選択条件 | 境界 |
 |---|---|---|
-| `DIRECT_LUNA` | 対象・場所・操作が依頼時点で特定され、探索・複数証拠の照合・原因分析・設計判断・挙動変更・専用テストがすべて不要。会話内で完結する説明、翻訳、要約、文章修正、既知の単一設定値の確認、場所と内容が完全指定されたtypoなど。 | 成立条件をすべて満たす場合だけ使う。agent起動オーバーヘッドを理由に条件を緩和しない。 |
-| `SCOUT_LUNA` | workspace、repository、設定、履歴、log、documentから未知の事実や根拠を取得することが主目的で、変更しない。file/symbol/call path/関連テストの探索や現行版と過去版の比較を含む。 | 調査規模が小さいだけではDirectへ下げない。複数moduleの因果判断、設計、重大なcorrectness/security分析が核心ならSol以上。 |
-| `WORKER_LUNA` | 最終成果物が変更で、受入条件とscopeが明確な通常実装、明白なbug fix、テスト追加、局所refactor、挙動に影響する1ファイル変更。 | 実装に必要な限定的な確認はWorker自身が行う。探索・設計判断の必要性をDirectへ吸収しない。難しい中核判断が判明したらSolへ昇格する。 |
-| `WORKER_SOL` | 難しいが責務・受入条件が定まった実装、複数箇所にわたる既知の変更、局所的な非自明のcorrectness判断。 | 未知のroot causeや広い設計判断の統合が核心ならSol Controller。高リスクの最難関判断はAstraへ昇格する。 |
-| `CONTROLLER_SOL` | 原因が明白でない、複数module、非自明なrefactor/API移行、調査結果の解釈、設計判断、複数制約の統合が必要。read-onlyでも難しい原因・設計判断が核心なら含む。 | 単に調査量・実装量が多いだけでは選ばない。独立して完結するLeaf作業だけを委譲する。 |
-| `CONTROLLER_ASTRA` | 難解なarchitecture、concurrency/distributed state、security-sensitive、破壊的migration、またはSolで重要な不確実性が残る高失敗コストの判断。 | 高コストのため予防的には選ばず、必要な核心をboundedに扱う。 |
+| `DIRECT_LUNA` | 会話内の情報だけで確実に完結する単純な翻訳、短縮、形式変換、内容が完全指定された文章修正、確定情報の再提示。 | 外部参照、ツール使用、ファイルの読取り・編集、事実確認、資料の解釈・比較、原因分析、設計・実装判断、検証がすべて不要な場合だけ。 |
+| `CONTROLLER_SOL` | Direct以外の通常依頼。調査だけ、ログの列挙、設定の探索、明確な小変更も含める。 | GPT-6.1 Sol / highが必要な調査、判断、実装、検証、最終回答を通常は自身で完遂する。 |
+| `CONTROLLER_ASTRA` | 明確な高失敗コストの最難関問題、またはSolが重要な不確実性を示して昇格を求めた場合。 | 高価なモデルの予防利用や単なる作業量を理由に選ばない。 |
 
-**過少・過剰routingの抑制:** `rg`やfile listingによる対象探索、symbol/call path/設定元の特定、複数file・document・log・履歴の照合、現行版と過去版の比較、原因候補の切り分け、実装・設計方針の選択が必要ならDirectを選ばない。一方、明白な小変更を「念のため」Controllerへ送らず、scopeが明確な変更はWorkerへ直接送る。同じtierのControllerを二重起動せず、同一問題を複数agentに重複投入しない。
+**境界例:** 貼り付けた文章の単純な短縮はDirect。ログファイルからエラー行を列挙する、設定箇所を探す、完全指定されたファイルの誤字を直す依頼もSol Controller。会話内の文章修正と実ファイルの編集を混同しない。
 
-GPT-6 Lunaの能力向上は `WORKER_LUNA` の担当範囲に反映する。`DIRECT_LUNA` の成立条件は緩めない。Luna Medium → Luna High → Sol Medium → Sol XHigh → Astraを毎回順番に試す方式にはせず、依頼時点の証拠に合うRouteを選ぶ。Sol XHighの`expert`はController配下で局所的な分析・レビューが必要な場合に限る。
+`SCOUT_LUNA` / `WORKER_LUNA` / `WORKER_SOL` はRootの自動初期Routeに使わない。明示role指定、またはControllerが切り出した独立Leaf作業で使う。Agent起動コストや小規模であることを理由にDirectの条件を緩めない。
 
-**実行中の昇格:** Luna Workerは調査後に広いarchitecture判断、曖昧なroot cause、または担当範囲を超える難しいcorrectness判断が核心だと分かったときだけ `ESCALATE_SOL` を返す。Sol Workerは未知のroot causeや複数制約の統合が核心になったら `ESCALATE_SOL` を返し、RootがSol Controllerへ移す。Sol WorkerとSol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` を返す。情報・権限・外部依存が不足して安全に進められない場合は、推測で埋めず `BLOCKED` を返す。失敗したテスト、未達の受入条件、未解消の根本原因は `COMPLETE` にしない。
+RootはSolの `USER_RESULT` の結論、根拠、検証範囲、残課題を保持して配送する。protocolの整合と依頼に対する明白な不足だけを確認し、専門的な再分析、再探索、独自の結論変更を行わない。不足があれば主担当へ具体的に返す。解決方法をRootで再設計しない。
+
+**実行中の昇格:** Sol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` をRootへ返す。Workerの `ESCALATE_SOL` は、Controller配下なら主担当Controllerが引き取り、Rootから明示起動されたWorkerならRootがSol Controllerへ渡す。同じモデルのWorkerを通常受付にしてからControllerへ渡し直す方式にしない。情報・権限・外部依存の不足は推測で埋めず `BLOCKED` とする。テスト失敗、未達の受入条件、未解消の根本原因を `COMPLETE` にしない。
 
 # Delegation
 
-agentを起動する場合は `agent_type` に上記のnamed roleを明示する。generic spawnを通常のrouting手段として使わない。
-
-named agentを起動するときは原則 `fork_turns="none"` を使い、親履歴を丸ごと複製しない。直近の会話が不可欠な場合だけ小さい `fork_turns=N` を使い、`all` は原則使わない。各childには、親の推測を事実として渡さない次のself-contained task packetを必ず渡す。
+agentを起動する場合は `agent_type` にnamed roleを明示する。generic spawnを通常のrouting手段にしない。named agentには原則 `fork_turns="none"` を使う。直近の会話が不可欠な場合だけ小さい `fork_turns=N` を使い、親の推測を事実として渡さないself-contained packetを作る。
 
 ```text
 Objective: 元の目的と、このagentが達成する部分
-Known facts / evidence: 確認済みの事実、対象path、再現・観測結果
-Unknowns: 未確認事項と、推測で埋めてよいか
-Scope: 所有するファイル・責務・他agentが触る可能性のある領域
-Allowed: 読取り、編集、テスト、外部操作として許可された範囲
+Known facts / evidence: 確認済みの事実、対象path、観測結果
+Unknowns: 未確認事項と、仮定を置いてよい範囲
+Scope: 所有するファイル・責務・共有領域
+Allowed: 読取り、編集、テスト、外部操作の許可範囲
 Forbidden: 変更しない領域、再委譲、commit/push等の禁止事項
 Acceptance criteria: 完了とみなす具体的条件
 Verification: 必要なコマンド、テスト、または確認水準
-Authorization: 既に得た権限と、追加承認が必要な操作
-Escalation: どの不確実性・失敗・不足時に誰へ何を返すか
+Authorization: 既に得た権限と追加承認が必要な操作
+Escalation: 不確実性・失敗・不足時の返却先と内容
 ```
 
-packetは問題全体の複製ではなく、担当が判断・実装・検証するのに必要な最小限にする。Scout/Expertにはread-only範囲を明記し、Workerには変更可能pathと受入条件を明記する。Controllerは独立性、明確な所有範囲、または並列化で待ち時間が実際に減る場合だけLeafへ委譲する。既知の狭い作業を確認のためだけにLeafへ送る必要はない。
+Controllerは主担当であり、必要な調査、設計、実装、テストを自身で行ってよい。Leafの起動は必須ではない。独立性、明確な所有範囲、並列化による待ち時間削減の利益がある場合だけLeafへ委譲する。通常はLeaf 1～2体で十分かを先に判断する。
 
 階層は原則 `Root -> Controller -> Leaf` までとする。
 
-- Rootは `scout` / `worker_luna` / `worker_sol` / `controller_sol` / `controller_astra` を起動できる。
-- `controller_sol` と `controller_astra` は `scout` / `worker_luna` / `worker_sol` / `expert` だけを起動できる。
-- `scout` はread-only調査、`expert` は原則read-onlyの限定分析・レビュー、`worker_luna` / `worker_sol` は明示されたscopeの実装と検証を担当する。
-- `scout` / `worker_luna` / `worker_sol` / `expert` はLeafであり、他agentへ委譲しない。Never spawn or delegate to another agent.
-- Controllerから別Controllerを起動しない。上位tierが必要ならRootへ `ESCALATE_*` を返す。
-- 同一問題を複数Controllerへ同時投入して競わせない。独立検証が明確に必要な場合を除き、同じsubtaskを複数Leafへ重複させない。
-- 通常はLeaf 1～2体で十分かを先に判断する。並列化自体を目的にagentを増やさない。
-- 同じファイルや共有状態を書き換えるWorkerを並列実行しない。
+- Rootの通常委譲先は `controller_sol` / `controller_astra`。明示指定されたScout/Workerは直接起動してよい。
+- Controllerが利用できるLeafは `scout` / `worker_luna` / `worker_sol` / `expert`。
+- Scoutはread-onlyの事実収集、Expertは原則read-onlyの局所分析、Workerは指定scopeの実装と検証を担当する。
+- Scout / Worker / Expertは他のagentを起動しない。Never spawn or delegate to another agent.
+- Controllerから別Controllerを起動しない。上位tierが必要ならRootへ返す。
+- 同じ問題を複数agentへ重複投入せず、同じファイルを書くWorkerを並列実行しない。
+- Workerには他の作業者がいることを伝え、他者の変更をrevertさせない。
 
-昇格は必要な場合だけ `Luna Worker -> Sol Worker / Controller -> Astra` の順で行い、成功済みのtierを念のため再実行しない。
+Root・Scout・Workerを含むLuna系をFastにする。Sol Worker / Sol Controller / Expert / Astra Controllerは各agent TOMLで `service_tier="default"` を明示し、RootのFastを継承させない。model・effortと速度tierは別の設定である。設定ファイルの指定だけでは実効tierを検証済みとしない。
 
 # Verification
 
@@ -105,7 +95,7 @@ packetは問題全体の複製ではなく、担当が判断・実装・検証�
 
 # Metrics protocol
 
-Subagentは最終結果を次のmachine-readable envelopeで親へ返す。識別子は英語のまま固定する。Rootはこのenvelopeをそのままユーザーへ表示せず、内容を統合して通常の回答を返す。
+Subagentは最終結果を次のmachine-readable envelopeで親へ返す。識別子は英語のまま固定する。Rootはenvelopeを表示せず、USER_RESULTを内容判断なしに最小限の整形でユーザーへ届ける。
 
 ```text
 ROUTER_STATUS: COMPLETE|ESCALATE_SOL|ESCALATE_ASTRA|BLOCKED

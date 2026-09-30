@@ -14,12 +14,12 @@ from typing import Iterable
 from rollout_reader import SessionSummary, parse_session_summary, parse_ts
 
 ROLE_PROFILES = {
-    "scout": ("gpt-6-luna", "medium", "v2", True),
-    "worker_luna": ("gpt-6-luna", "high", "v2", True),
-    "worker_sol": ("gpt-6-sol", "medium", "v2", True),
-    "controller_sol": ("gpt-6-sol", "medium", "v2", False),
-    "expert": ("gpt-6-sol", "xhigh", "v2", True),
-    "controller_astra": ("gpt-6-astra", "high", "v2", False),
+    "scout": ("gpt-6-luna", "medium", "v2", "fast", True),
+    "worker_luna": ("gpt-6-luna", "high", "v2", "fast", True),
+    "worker_sol": ("gpt-6.1-sol", "high", "v2", "standard", True),
+    "controller_sol": ("gpt-6.1-sol", "high", "v2", "standard", False),
+    "expert": ("gpt-6.1-sol", "xhigh", "v2", "standard", True),
+    "controller_astra": ("gpt-6-astra", "high", "v2", "standard", False),
 }
 EXPECT_CHOICES = (
     "root",
@@ -100,9 +100,9 @@ def validate_profile(
         issues.append("turn_context が見つかりません")
 
     if is_root:
-        expected = ("gpt-6-luna", "medium", "v2")
-        actual = (record.model, record.reasoning_effort, record.multi_agent_version)
-        labels = ("model", "effort", "multi_agent_version")
+        expected = ("gpt-6-luna", "medium", "v2", "fast")
+        actual = (record.model, record.reasoning_effort, record.multi_agent_version, record.service_tier)
+        labels = ("model", "effort", "multi_agent_version", "service_tier")
         for label, exp, got in zip(labels, expected, actual):
             if got != exp:
                 issues.append(
@@ -114,11 +114,12 @@ def validate_profile(
         elif record.agent_role not in ROLE_PROFILES:
             issues.append(f"未知の agent_role: {record.agent_role}")
         else:
-            model, effort, mav, leaf = ROLE_PROFILES[record.agent_role]
+            model, effort, mav, service_tier, leaf = ROLE_PROFILES[record.agent_role]
             for label, exp, got in (
                 ("model", model, record.model),
                 ("effort", effort, record.reasoning_effort),
                 ("multi_agent_version", mav, record.multi_agent_version),
+                ("service_tier", service_tier, record.service_tier),
             ):
                 if got != exp:
                     issues.append(
@@ -230,7 +231,7 @@ def print_tree(
         print(
             f"{prefix}{branch}[{status}] {role} | "
             f"{record.model or '<missing>'} / {record.reasoning_effort or '<missing>'} / "
-            f"{record.multi_agent_version or '<missing>'} | id={short_id(record.session_id)}{task}"
+            f"{record.multi_agent_version or '<missing>'} / {record.service_tier} | id={short_id(record.session_id)}{task}"
         )
         if show_context:
             print(f"{prefix}   Context: {format_context(record)}")
@@ -283,7 +284,7 @@ def context_warnings(records: Iterable[SessionSummary]) -> list[str]:
 
 def print_table(records: list[SessionSummary], *, show_context: bool = False) -> None:
     # 機械識別子は英語のまま維持し、見出しだけ日本語化する。
-    headers = ("Session", "Parent", "Role", "Model", "Effort", "MAV", "Task")
+    headers = ("Session", "Parent", "Role", "Model", "Effort", "MAV", "Speed", "Task")
     rows = [
         (
             short_id(item.session_id),
@@ -292,6 +293,7 @@ def print_table(records: list[SessionSummary], *, show_context: bool = False) ->
             item.model or "-",
             item.reasoning_effort or "-",
             item.multi_agent_version or "-",
+            item.service_tier,
             item.task_name or "-",
         )
         for item in records
@@ -315,7 +317,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "指定時間以降のCodex rollout JSONLを解析し、"
-            "Root/Child/Grandchildの実効 model・effort・Multi-Agent runtime・role を検証します。"
+            "Root/Child/Grandchildの実効 model・effort・service_tier・Multi-Agent runtime・role を検証します。"
         )
     )
     parser.add_argument(
@@ -485,7 +487,7 @@ def main() -> int:
 
     if warning_count == 0:
         print("RESULT: PASS")
-        print("実効model / effort / Multi-Agent runtime / role配線は期待値と一致しています。")
+        print("実効model / effort / service_tier / Multi-Agent runtime / role配線は期待値と一致しています。")
         return 0
 
     print(f"RESULT: CHECK（警告 {warning_count} 件）")

@@ -120,3 +120,7 @@ collect.py / report.pyでtoken・完遂率・昇格率を確認
 ```
 
 モデルやCodex runtimeを更新した場合は、ここに記録した実機検証を永続的な保証とみなさず、Luna Root、Sol nested delegation、Luna leaf behaviorを再検証します。
+
+## 2026-10-01の構成
+
+上記は以前の経緯を保存した記録です。現在はLuna Medium / Fast Rootから、単純な会話内処理以外を6.1 Sol High / Standard Controllerへ渡します。ScoutもLuna Medium / Fastです。現行契約は[`AGENTS.md`](../AGENTS.md)、変更理由は[`DESIGN-DECISIONS.md`](DESIGN-DECISIONS.md)を参照してください。

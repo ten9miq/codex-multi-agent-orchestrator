@@ -20,7 +20,7 @@ python "$env:USERPROFILE\.codex\metrics\report.py" --since $Until.AddDays(-7).To
 | `--since DATETIME` | 開始日時（含む） | なし |
 | `--until DATETIME` | 終了日時（含まない） | なし |
 | `--weights PATH` | API USD換算の参考単価 JSON | `~/.codex/metrics/cost-weights.json` |
-| `--credit-rates PATH` | Codex Standard速度の追加クレジット参考単価 JSON | `~/.codex/metrics/codex-credit-rates.json` |
+| `--credit-rates PATH` | Codex Standard速度を基準にした追加クレジット参考単価 JSON | `~/.codex/metrics/codex-credit-rates.json` |
 
 入力がなければ `collect.py` の実行を案内します。壊れた JSONL 行は数だけ表示して、読めた行から集計します。
 
@@ -59,7 +59,9 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 
 ## 重み付きコスト
 
-現在の `cost-weights.json` はAPI Standard短文脈のUSD単価、`codex-credit-rates.json` はCodex Standard速度の追加クレジット単価です。各ファイルに確認日と出典を付けています。以下は旧構成の相対weightの例であり、現在の設定値ではありません。
+現在の `cost-weights.json` はAPI Standard短文脈のUSD単価、`codex-credit-rates.json` はCodex Standard速度の追加クレジット単価です。各ファイルに確認日と出典を付けています。観測された`service_tier`が`fast`なら両推計を2倍し、`standard`なら基準単価を使用します。欠損・未知のtierを持つ旧Metricsは算定対象外です。reasoning tokenはoutput tokenに含まれるため重複加算しません。以下は旧構成の相対weightの例であり、現在の設定値ではありません。
+
+API推計は短文脈の入力・キャッシュ済み入力・出力のみを扱います。APIのcache write単価、272K token超のリクエスト条件、その他の従量項目は再現しません。Codex追加クレジット推計はプラン内利用枠の消費量を表しません。Fastのプラン内利用枠係数2.5倍を追加クレジット推計に流用しません。
 
 ```json
 {

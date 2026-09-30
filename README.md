@@ -8,8 +8,7 @@ Codex Multi-Agent V2 の公開可能な設定、agent role、Metricsを管理す
 `config.example.toml` をテンプレートとして `CODEX_HOME/config.toml` に適用します。
 
 ```powershell
-.
-\scripts\install.ps1
+.\scripts\install.ps1
 ```
 
 既存の `config.toml` は日時付きバックアップを作成し、公開テンプレートが管理するキー・sectionだけを更新します。`notify`、MCP、trusted projectなど、管理対象外の既存設定は保持します。
@@ -41,58 +40,38 @@ Root routing指示も`CODEX_HOME/AGENTS.md`へ適用する場合は、既存フ�
 
 ## 中心思想
 
-この構成は、通常時に`gpt-6-luna / medium`をRoot Routerとして使い、タスクの複雑度とリスクに応じて高いeffortと上位モデルを限定的に起動します。Composerまたは依頼本文でモデルやroleが明示された場合はその指定を優先します。
+Rootは `gpt-6-luna / medium / Fast` の薄いRouterです。会話内で確実に完結する単純な処理だけをDirectで行い、調査・判断・ファイル操作・実装・検証が必要な通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
 
 ```text
-Luna Medium Root
-  ├─ DIRECT_LUNA       極小・明白な処理
-  ├─ SCOUT_LUNA        read-heavyな探索
-  ├─ WORKER_LUNA       通常実装
-  ├─ WORKER_SOL        難しいが境界の明確な実装
-  ├─ CONTROLLER_SOL    複雑な調査・設計・実装
-  └─ CONTROLLER_ASTRA  最難関・高リスク
+Luna Medium / Fast Root
+  ├─ DIRECT_LUNA       会話内だけで完結する単純処理
+  ├─ CONTROLLER_SOL    調査・判断・実装・検証の通常主担当
+  │    └─ 必要な場合だけScout / Worker / Expert
+  └─ CONTROLLER_ASTRA  例外的な高失敗コストの判断
 ```
 
-以下のtreeはLunaをRootにした自動ルーティング時を示します。別モデルがRootとして明示選択されている場合はそのモデルを優先し、作業形態は依頼の範囲で決めます。
+Controllerは通常、自分で完遂します。Workerを必ず挟む構成にはせず、独立した作業を切り出す利益がある場合だけLeafを起動します。Rootは主担当のユーザー向け最終回答を受け取り、専門的な再分析を行いません。Composer・依頼本文の明示model/role指定を優先し、適合するRootがいる場合は同じ役割を重複起動しません。
 
-```mermaid
-flowchart TD
-    U["User"] --> R["Luna Medium Root Router<br/>gpt-6-luna / medium / V2"]
+| 担当 | Model | Effort | 速度 |
+|---|---|---|---|
+| Root Router | GPT-6 Luna | medium | Fast |
+| Scout | GPT-6 Luna | medium | Fast |
+| Luna Worker | GPT-6 Luna | high | Fast |
+| Sol Controller / Worker | GPT-6.1 Sol | high | Standard |
+| Expert | GPT-6.1 Sol | xhigh | Standard |
+| Astra Controller | GPT-6 Astra | high | Standard |
 
-    R -->|"極小・明白"| D["DIRECT_LUNA<br/>Luna Medium"]
-    R -->|"read-heavy探索"| S["SCOUT_LUNA<br/>Luna Scout / Leaf"]
-    R -->|"通常実装"| W["WORKER_LUNA<br/>Luna High / Leaf"]
-    R -->|"難しい既知の実装"| SW["WORKER_SOL<br/>Sol Medium / Leaf"]
-    R -->|"複雑"| C["CONTROLLER_SOL<br/>Sol Medium"]
-    R -->|"最難関・高リスク"| A["CONTROLLER_ASTRA<br/>Astra High"]
-
-    C --> CS["Luna Scout / Leaf"]
-    C --> CW["Luna High Worker / Leaf"]
-    C --> SCW["Sol Medium Worker / Leaf"]
-    C --> CE["Sol XHigh Expert / Leaf"]
-
-    A --> AS["Luna Scout / Leaf"]
-    A --> AW["Luna High Worker / Leaf"]
-    A --> ASW["Sol Medium Worker / Leaf"]
-    A --> AE["Sol XHigh Expert / Leaf"]
-```
-
-Rootの責務はrouting、task packet構築、結果統合、escalation判断に限定します。通常実装は`Luna Medium Root → Luna High Worker`で直接処理し、難しい既知の実装はSol Medium Workerへ送ります。LeafはScout、Luna/Sol Worker、Sol XHigh Expertとし、再委譲させません。ControllerはSol/Astraだけとし、必要なLeafだけを通常1〜2体起動します。
+Root・Scout・Workerを含むLuna系をFastにし、Sol系とAstraのroleは `service_tier = "default"` を明示します。速度を省略してRootのFastを継承しないようにします。`fast`はリクエストの`priority`に対応します。設定の根拠は[公式Subagentsガイド](https://learn.chatgpt.com/docs/agent-configuration/subagents)と[設定リファレンス](https://learn.chatgpt.com/docs/config-file/config-reference)です。実環境でのtierの適用は新規sessionで別途確認します。
 
 ## Routing判定表
 
-Luna Rootは最終成果物、探索の必要性、変更scope、不確実性、失敗リスク、必要な検証を順に確認し、最小で完遂可能なrouteを一つ選びます。コストはRouteの成立条件を満たした後にだけ比較します。Composerまたは依頼本文で指定されたmodel/roleは自動判定より優先し、`read-only`・調査のみ等の指定は操作範囲を制約しますが、明示modelを下位Routeへ変更しません。
+| 依頼の状態 | 自動初期Route | 例 |
+|---|---|---|
+| 会話内だけで確実に完結し、ツール・事実確認・内容判断が不要 | `DIRECT_LUNA` | 単純な翻訳、短縮、形式変換、完全指定された文章修正 |
+| 調査・判断・ファイル操作・実装・検証が必要、または必要性が不明 | `CONTROLLER_SOL` | 設定探索、ログ列挙、ファイルの誤字修正、原因分析、実装 |
+| 明確な最難関の高失敗コスト問題、またはSolからの必要な昇格 | `CONTROLLER_ASTRA` | Solで重要な不確実性が残る問題 |
 
-| 依頼の状態 | Route | 例 | 選ばない条件 |
-|---|---|---|---|
-| 対象・場所・操作が既知で、探索・複数証拠の照合・原因分析・挙動変更がすべて不要 | `DIRECT_LUNA` | 会話内の説明、翻訳、既知の単一値、完全指定されたtypo | `rg`、file探索、複数資料の比較、設計・実装判断が必要 |
-| 未知の事実・現在状態・根拠の取得だけ | `SCOUT_LUNA` | symbol、call path、関連test、設定、履歴、文書の確認 | 書込みが必要、または難しい因果・設計判断が核心 |
-| scopeと受入条件が明確な通常変更 | `WORKER_LUNA` | bug fix、test追加、局所refactor、挙動に影響する1ファイル変更 | 難しい中核判断、広い設計判断、原因不明の複数module障害 |
-| 難しいが責務と受入条件が定まった変更 | `WORKER_SOL` | 既知の複数箇所変更、局所的な非自明のcorrectness判断 | 未知のroot cause、複数制約の設計統合、Astra級の高リスク判断 |
-| 原因不明、複数制約の統合、難しい調査結果の解釈 | `CONTROLLER_SOL` | 非自明refactor、API移行、複数module、read-onlyの設計分析 | 作業量だけが大きい、または狭く既知な実装 |
-| 高失敗コストで、Solでも重要な不確実性が残る | `CONTROLLER_ASTRA` | concurrency、distributed state、security-sensitive、破壊的migration | 予防的な高性能化、通常の調査・実装 |
-
-過少routingを避けるため、未知の対象探索、複数証拠の照合、原因切り分け、設計・実装方針の選択をDirectで行いません。GPT-6 Lunaの能力向上は通常Workerの担当範囲に反映し、Directの条件は緩めません。調査規模が小さいことやagent起動オーバーヘッドはDirectへ下げる理由になりません。最終成果物が明確な変更ならScoutを儀式的に挟まずWorkerへ直接送り、依頼時点の証拠でLuna HighとSol Mediumを選びます。下位effortを毎回順番に試す方式にはしません。
+Scout/Workerは明示role指定、またはController配下のLeafで使います。通常依頼のRoot初期Routeには使いません。Directの条件は小規模であることやagent起動コストを理由に緩めません。詳細とcanonical sourceは[`AGENTS.md`](AGENTS.md)です。
 
 ## Contextと結果の扱い
 
@@ -142,6 +121,8 @@ Metricsは設定を自動変更しません。変更前後、token cost、完遂
 追加クレジット換算はプラン内利用枠の減少量を表しません。自然言語でのRoute判定とSol Workerのeffort比較は[Routing回帰確認](metrics/docs/ROUTING-EVAL.md)に記載します。
 
 ## Smoke Testの基本
+
+静的検証は `python -m unittest discover -s scripts -p "test_*.py"` と `python -m unittest discover -s metrics -p "test_*.py"` で実行します。TOMLとinstallerの検証や合成rolloutのPASSを、実際のモデル・速度・自動routingの成功として扱いません。
 
 設定変更後はCodexを完全終了して再起動し、新規sessionで確認します。
 

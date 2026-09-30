@@ -174,20 +174,25 @@ def weighted_cost(row: dict[str, Any], weights: dict[str, dict[str, float]]) -> 
     w = weights.get(row.get("model", ""))
     if not isinstance(w, dict):
         return None
+    tier = row.get("service_tier")
+    if tier in {"priority", "fast"}:
+        speed_multiplier = 2.0
+    elif tier in {"default", "standard"}:
+        speed_multiplier = 1.0
+    else:
+        # 旧rolloutの欠損やautoは実効速度を証明できない。
+        return None
 
     inp = int(row.get("input_tokens", 0) or 0)
     cached = int(row.get("cached_input_tokens", 0) or 0)
     out = int(row.get("output_tokens", 0) or 0)
-    reasoning = int(row.get("reasoning_tokens", 0) or 0)
     uncached = max(0, inp - cached)
 
-    # weightの単位は「100万tokenあたりの任意の相対値」。
-    # reasoning専用weightがない場合はoutput weightを使う。
-    return (
+    # reasoning_tokensはoutput_tokensに含まれるため重複加算しない。
+    return speed_multiplier * (
         uncached * float(w.get("input", 0))
         + cached * float(w.get("cached_input", w.get("input", 0)))
         + out * float(w.get("output", 0))
-        + reasoning * float(w.get("reasoning", w.get("output", 0)))
     ) / 1_000_000
 
 
@@ -798,7 +803,7 @@ def main() -> int:
         costs = [weighted_cost(row, weights) for row in rows]
         costs = [cost for cost in costs if cost is not None]
         if costs:
-            print(f"\n■ {api_cost_label}" + ("（Standard短文脈単価）" if api_cost_label.startswith("API") else ""))
+            print(f"\n■ {api_cost_label}" + ("（実効速度を反映、Standard短文脈単価が基準）" if api_cost_label.startswith("API") else ""))
             print(f"  既知モデルturnの小計          {sum(costs):>12.4f}")
             print(f"  算定対象turn                {len(costs):>12,}/{len(rows):,}")
             task_costs: list[float] = []
@@ -812,11 +817,14 @@ def main() -> int:
             print(f"  weight設定                   {args.weights}")
             print(f"  単価確認日                   {rate_as_of(args.weights)}")
             print("  ※ 設定した単価による参考値です。実際のAPI請求額やCodex利用枠の消費ではありません。")
+        else:
+            print(f"\n■ {api_cost_label}")
+            print("  算定できるmodel・service_tier既知のturnがありません。")
     else:
         print(f"\n■ {api_cost_label}")
         print("  無効です。cost-weights.json にモデル別weightを設定すると表示されます。")
 
-    print("\n■ Codex追加クレジット換算の推計（Standard速度）")
+    print("\n■ Codex追加クレジット換算の推計（実効速度を反映）")
     credit_values = [weighted_cost(row, credit_rates) for row in rows]
     known_credits = [value for value in credit_values if value is not None]
     if known_credits:
@@ -826,7 +834,7 @@ def main() -> int:
         print(f"  単価確認日                   {rate_as_of(args.credit_rates)}")
         print("  ※ 追加クレジット単価による参考値です。プラン内利用枠の減少量や請求額ではありません。")
     else:
-        print("  算定できるモデルturnがありません。")
+        print("  算定できるmodel・service_tier既知のturnがありません。")
 
     return 0
 
