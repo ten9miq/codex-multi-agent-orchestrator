@@ -176,7 +176,8 @@ RESULT: PASS (TURN_CONTEXT_PROFILE_ONLY)
 | Direct | 「次の文章を短くして」など会話内の情報だけで完結する単純な変換 | `DIRECT_LUNA` | 外部参照・tool・ファイル操作・内容判断が必要ならDirect成立条件違反。 |
 | 事実探索 | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `CONTROLLER_SOL` | この呼出経路・関連testの探索はbounded Scout条件を満たさず、Direct/Scoutなら不一致。 |
 | 指定の事実取得 | 「指定logの完全一致ERROR行を行番号つきで全件列挙」だけ | `SCOUT_LUNA` | 推論・原因診断を足すならSol。source/検索/受入条件が不明ならSol。 |
-| 小変更 | 「指定fileのtypoを修正して」 | `CONTROLLER_SOL` | 実ファイルの確認・編集が必要。 |
+| 小変更 (check不明) | 「指定fileのtypoを修正して」 | `CONTROLLER_SOL` | 完全指定の変換と既存の決定的checkまで揃わない。 |
+| bounded変換 | 「通常文書の指定文字列だけを指定置換し、受入をcoverする既存checkを実行」 | `WORKER_LUNA` | protected/sensitive変更、semantic design、check設計が必要ならSol。 |
 | 明白なbug修正 | 「この明白なbugを指定fileで修正し、対象testを通して」 | `CONTROLLER_SOL` | 挙動変更と検証が必要。 |
 | 難しい既知の実装 | 「対象moduleと受入条件が明確な非自明の修正をして」 | `CONTROLLER_SOL` | 必要なら独立したLeaf作業だけを切り出す。 |
 | 原因不明の回帰 | 「複数moduleで原因不明の回帰を診断し、選択肢を統合して修正して」 | `CONTROLLER_SOL` | Astraは高riskの具体的根拠がある場合だけ。 |

@@ -63,6 +63,41 @@ class RoutingEvaluationTests(unittest.TestCase):
         self.assertIn('ROOT_AUTO', instructions)
         self.assertEqual(role['sandbox_mode'], 'read-only')
 
+    def test_bounded_worker_whole_task_and_verification(self):
+        for id in ('W4','W8'):
+            self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase5'), 'WORKER_LUNA')
+            self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase4'), 'CONTROLLER_SOL')
+        for id in ('W1','W2','W3','W5','W6','W9','W10'):
+            self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase5'), 'CONTROLLER_SOL')
+        self.assertEqual(expected_route(self.cases['W7']['feature_card'], 'phase5'), 'CONTROLLER_ASTRA')
+
+    def test_final_auto_routes_exclude_worker_sol(self):
+        routes={expected_route(case['feature_card'],'phase5') for case in self.fixtures['cases']}
+        self.assertEqual(routes,{'DIRECT_LUNA','SCOUT_LUNA','WORKER_LUNA','CONTROLLER_SOL','CONTROLLER_ASTRA'})
+
+    def test_worker_failed_check_requires_escalation_evidence_not_success(self):
+        run=self.run_record('W4','WORKER_LUNA','worker_luna','phase5')
+        run['completion'].update(status='ESCALATE_SOL',acceptance_met=False,verification='FAIL',
+                                 evidence=['synthetic:diff-remains','synthetic:current-state'],
+                                 verification_evidence=['synthetic:check-failed'])
+        result=score_run(self.cases['W4'],run)
+        self.assertTrue(result['route_match'])
+        self.assertFalse(result['pass'])
+        self.assertIn('synthetic:diff-remains',result['completion_evidence'])
+        run=self.run_record('W4','WORKER_LUNA','worker_luna','phase5')
+        self.assertTrue(score_run(self.cases['W4'],run)['pass'])
+        self.assertEqual(score_run(self.cases['W4'],run)['escalation_events'],[])
+
+    def test_worker_role_preserves_leaf_scope_and_no_mandatory_review(self):
+        import tomllib
+        role=tomllib.loads((Path(__file__).parents[1]/'agents/worker-luna.toml').read_text())
+        instructions=role['developer_instructions']
+        for text in ('CONTROLLER_LEAF','EXPLICIT','ROOT_AUTO','既存の決定的check',
+                     '現在のdiff','自動rollback','再reviewを必須としない'):
+            self.assertIn(text,instructions)
+        self.assertEqual(role['model'],'gpt-6-luna')
+        self.assertEqual(role['model_reasoning_effort'],'high')
+
     def test_hard_reasoning_and_ordinary_design_pair(self):
         self.assertEqual(expected_route(self.cases['A1']['feature_card'], 'phase3'), 'CONTROLLER_ASTRA')
         self.assertEqual(expected_route(self.cases['A2']['feature_card'], 'phase3'), 'CONTROLLER_SOL')

@@ -41,3 +41,15 @@ Fastの追加クレジット・API料金は同モデルStandardの2倍、プラ�
 TOML解析、installerの既存設定保持、合成rolloutによるMetrics単体テストは静的・ローカルの検証です。実際のmodel・effort・tierの継承、自然言語routing、品質・費用への効果はCodex再起動後の新規sessionで別途確認します。設定値しかない場合やtier欠落のrolloutで実効速度をPASSにしません。
 
 Leafの再委譲禁止、必要情報だけのpacket、重複作業と成功済み検証の反復抑制、受動Metricsを維持します。wait/statusの設計は[`WAIT-POLLING.md`](WAIT-POLLING.md)、以前の経緯は[`ROUTER-HISTORY.md`](ROUTER-HISTORY.md)です。
+
+## 2026-10-03: bounded routingの段階導入 (phase 3–5)
+
+上の2026-10-01記録は変更前の履歴です。現在のrouting契約はAGENTS.mdを参照します。
+
+- phase 3: 初期3-routeと旧Astra基準を維持し、6軸feature card、evidence/unknowns、ROOT_AUTO/CONTROLLER_LEAF/EXPLICIT、versioned offline fixtures/scorerを追加。
+- phase 4: 依頼全体が指定sourceの直接表現された事実の取得だけならScoutを許可。比較・推薦・診断・unknownはSolへ。真に難解な推論へのAstra適用は低consequenceでも可能とする変更を明示。
+- phase 5: 完全指定の低risk・可逆・局所変換と、受入条件をcoverする既存決定的checkだけならLuna Workerを許可。1ファイルだけでは成立せず、protected/sensitiveやsemantic designは除外。
+
+初期RouteはDirect / Scout / Luna Worker / Sol Controller / Astra Controller。自動Sol Workerは追加しません。Controller配下Leafや明示指定の能力を狭めません。失敗時は証拠と現在状態を引き継ぎ、権限/network不足をmodel escalationで回避しません。成功したLuna Workerへmandatory Sol再reviewを足しません。
+
+期待効果は不要なController hopの削減ですが、品質・総token・待ち時間・費用の改善は未測定です。synthetic test、既存9件の手動ケース、配線Smokeをsemantic live evalと扱いません。current/new/alwaysSolの独立session比較、実spawn role、完遂証拠、全親子usage/time、downgrade/overroute候補を[評価手順](../metrics/docs/ROUTING-EVAL.md)で確認します。危険なdowngradeや受入不成立が増えた場合は該当bounded入口をSolへ戻し、既存成果を維持して理由を記録します。

@@ -40,15 +40,16 @@ Root routing指示も`CODEX_HOME/AGENTS.md`へ適用する場合は、既存フ�
 
 ## 中心思想
 
-Rootは `gpt-6-luna / medium / Standard` の薄いRouterです。会話内の単純処理はDirect、source・検索・受入条件が指定済みで成果物全体が直接記載された事実の取得だけならScoutとし、それ以外の通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
+Rootは `gpt-6-luna / medium / Standard` の薄いRouterです。会話内の単純処理はDirect、source・検索・受入条件が指定済みで成果物全体が直接記載された事実の取得だけならScoutとし、完全指定された低risk・可逆な局所変換を既存の決定的checkまで完結できるならLuna Workerとし、それ以外の通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
 
 ```text
 Luna Medium / Standard Root
   ├─ DIRECT_LUNA       会話内だけで完結する単純処理
   ├─ SCOUT_LUNA        指定sourceの直接記載された事実を取得
+  ├─ WORKER_LUNA       完全指定の低risk変換と既存check
   ├─ CONTROLLER_SOL    調査・判断・実装・検証の通常主担当
   │    └─ 必要な場合だけScout / Worker / Expert
-  └─ CONTROLLER_ASTRA  例外的な高失敗コストの判断
+  └─ CONTROLLER_ASTRA  最難関の推論・高失敗影響の判断
 ```
 
 Controllerは通常、自分で完遂します。Workerを必ず挟む構成にはせず、独立した作業を切り出す利益がある場合だけLeafを起動します。Rootは主担当のユーザー向け最終回答を受け取り、専門的な再分析を行いません。Composer・依頼本文の明示model/role指定を優先し、適合するRootがいる場合は同じ役割を重複起動しません。
@@ -70,10 +71,11 @@ Rootとすべてのactive roleはallStandardとし、それぞれ `service_tier 
 |---|---|---|
 | 会話内だけで確実に完結し、ツール・事実確認・内容判断が不要 | `DIRECT_LUNA` | 単純な翻訳、短縮、形式変換、完全指定された文章修正 |
 | 指定source・検索・受入条件で、成果物全体が直接記載された事実の取得 | `SCOUT_LUNA` | 指定logの完全一致行・指定JSON fieldの列挙 |
-| 解釈・診断・変更・検証が必要、source不明、または安価routeの適格性が不明 | `CONTROLLER_SOL` | 設定探索、ログ列挙、ファイルの誤字修正、原因分析、実装 |
+| 完全指定の低risk・可逆な局所変換と、受入条件全体をcoverする既存check | `WORKER_LUNA` | 通常文書の完全一致置換と指定check |
+| 解釈・診断・設計判断が必要、保護/機微変更、既存check不足、または安価routeの適格性が不明 | `CONTROLLER_SOL` | 設定探索、ログ列挙、ファイルの誤字修正、原因分析、実装 |
 | 明確な最難関の推論、重大失敗影響の判断、またはSolからの必要な昇格 | `CONTROLLER_ASTRA` | Solで重要な不確実性が残る問題 |
 
-Workerは明示role指定、またはController配下のLeafで使います。ScoutのROOT_AUTOは狭い完全指定の取得だけで、CONTROLLER_LEAF/EXPLICITの探索契約は維持します。推論・比較・推薦・診断を含む混合依頼はSolです。Directの条件は小規模であることやagent起動コストを理由に緩めません。詳細とcanonical sourceは[`AGENTS.md`](AGENTS.md)です。
+Sol Workerは明示role指定、またはController配下のLeafで使い、自動初期Routeに追加しません。Scout/Luna WorkerのROOT_AUTOは上記の狭い契約だけで、CONTROLLER_LEAF/EXPLICITの探索・通常実装契約は維持します。推論・比較・推薦・診断を含む混合依頼、単に1ファイルというだけの変更はSolです。成功したbounded Luna WorkerにSolのmandatory再reviewを挟みません。Directの条件は小規模であることやagent起動コストを理由に緩めません。詳細とcanonical sourceは[`AGENTS.md`](AGENTS.md)です。
 
 ## Contextと結果の扱い
 
