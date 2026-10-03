@@ -38,7 +38,7 @@ Rootはrouting stateとdistilled knowledgeを持ち、全agentのraw作業履歴
 
 ## Contextと権限
 
-既存のmodel_context_window=872000は維持し、auto-compactのglobal overrideは追加しません。上限指定自体は使用token量ではありません。APIの272K超の実入力は長文脈料金ですが、Codexの利用枠に同じ倍率を適用しません。
+既存のmodel_context_window=872000は維持し、auto-compactのglobal overrideは追加しません。上限指定自体は使用token量でも料金根拠でもありません。API長文脈料金はmodel別・確認日付きの[料金ルール](../metrics/docs/API-COST.md)と、同一requestのinput/cache/model/tier根拠が揃う場合だけ分類します。session累積、last_token_usage.total_tokens、設定windowから閾値超過を推定しません。現行rolloutの不足情報は未分類のまま残し、Codex追加クレジットやPro利用枠へAPI倍率を転用しません。
 
 V2のmax_depthだけをhard enforcementとみなさず、role指示・packet・Smoke Testで階層を確認します。read-only roleはファイル非変更の指示も守ります。
 

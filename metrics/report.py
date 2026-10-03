@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from api_cost import rollout_cost_coverage
 from rollout_reader import parse_ts
 
 
@@ -359,8 +360,18 @@ def main() -> int:
         print(f"  observed_turn {tier:<14} {count:>10,}")
     print("  configured tier             UNKNOWN（収集時の現在設定を過去へ適用しません）")
     print("  requested tier              UNVERIFIED")
-    print(f"  request単位の算定coverage    0/{len(rows):,} turns; request数 UNKNOWN")
-    print("  ※ turn_contextはrequest traceではありません。短/長文脈の料金分類は未確認です。")
+    cost_coverage = rollout_cost_coverage(rows)
+    request_count = "UNKNOWN" if cost_coverage["unknown_request_count"] else "未提供"
+    print(
+        f"  算定可能turn coverage       {cost_coverage['classified_rows']:,}/"
+        f"{cost_coverage['total_rows']:,} turns; request数 {request_count}"
+    )
+    print(
+        f"  短/長文脈の料金未分類        {cost_coverage['unclassified_rows']:,}/"
+        f"{cost_coverage['total_rows']:,} turns"
+    )
+    print("  ※ turn_contextはrequest traceではありません。実request adapterは未接続です。")
+    print("  ※ requestのinput/cache write/model/実効tier帰属が不足するため、料金分類は未確認です。")
     print("  ※ 旧service_tierだけの行・欠損・mixedもrequest tierの根拠にはしません。")
     if args.scenario_tier:
         print(f"  参考シナリオ                 {args.scenario_tier}を全tokenに仮定（短文脈基準）")
