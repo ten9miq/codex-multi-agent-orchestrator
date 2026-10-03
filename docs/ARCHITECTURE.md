@@ -2,12 +2,13 @@
 
 ## 目的と責務
 
-RootはGPT-6 Luna / medium / Standardで依頼を分類し、task packetを渡し、主担当の回答を配送します。会話内の単純処理だけをDirectにし、調査・判断・ファイル操作・実装・検証が必要な通常依頼はGPT-6.1 Sol / high / Standardへ渡します。Lunaが委譲前に調査したり、結果の専門的判断をやり直したりする構成にはしません。
+RootはGPT-6 Luna / medium / Standardで依頼を分類し、task packetを渡し、主担当の回答を配送します。会話内の単純処理だけをDirectにし、指定source内の直接表現された事実を指定検索・受入条件で取得するだけならScout、それ以外の通常依頼はGPT-6.1 Sol / high / Standardへ渡します。Lunaが委譲前に調査したり、結果の専門的判断をやり直したりする構成にはしません。
 
 ```mermaid
 flowchart TD
     U[User] --> R["Luna Medium / Standard Root"]
     R -->|"会話内だけで完結"| D[DIRECT_LUNA]
+    R -->|"完全指定の事実取得"| S
     R -->|"調査・判断・変更・検証"| C["6.1 Sol High / Standard Controller"]
     R -->|"必要な昇格"| A["Astra High / Standard Controller"]
     C -->|"必要な場合だけ"| S["Luna Medium / Standard Scout"]
@@ -18,7 +19,7 @@ flowchart TD
     A --> E
 ```
 
-Controllerは必要な調査、設計、実装、テスト、最終回答まで通常は自身で完遂します。毎回Leafを起動しません。独立性・明確な所有範囲・待ち時間削減の利益がある場合だけ、通常1～2 Leafへ委譲します。Rootの自動初期RouteはDirect / Sol Controller / Astra Controllerの3つです。Scout/Workerの直接起動は明示role指定に限ります。明示modelとして適合するRootが動作中なら同役割を重複起動しません。
+Controllerは必要な調査、設計、実装、テスト、最終回答まで通常は自身で完遂します。毎回Leafを起動しません。独立性・明確な所有範囲・待ち時間削減の利益がある場合だけ、通常1～2 Leafへ委譲します。Rootの自動初期RouteはDirect / Scout / Sol Controller / Astra Controllerです。Workerの直接起動は明示role指定に限ります。明示modelとして適合するRootが動作中なら同役割を重複起動しません。
 
 ## 設定と速度
 
@@ -49,3 +50,11 @@ Source of Truthは`%USERPROFILE%/.codex/sessions/**/rollout-*.jsonl`です。Met
 現在の自動初期Route 3種類を変えず、6軸のtask feature card (`scope / method / context / reasoning / verification / consequence`) と各軸のevidence、unknownsを導入します。自己申告confidenceを使わず、依頼と既知情報から一度だけ分類します。調査してから安価routeに振るための準備作業はRootで行いません。
 
 `ROOT_AUTO` と `CONTROLLER_LEAF` と `EXPLICIT` は別のpacket適用範囲です。明示指定と既存のController配下Leafの能力は維持します。offline evaluatorは固定fixtureの期待を決定的に再現する参照実装で、自然言語routerのhard enforcementではありません。synthetic fixtureのPASS、配線Smoke、手動ケース表の存在は実際の自動routingや費用改善の証明になりません。手順は[Routing評価](../metrics/docs/ROUTING-EVAL.md)を参照してください。
+
+## Bounded Scout (phase 4)
+
+ROOT_AUTOでScoutへ渡せるのは、依頼全体が指定sourceに直接記載された事実の取得だけの場合です。検索条件、返すfield、受入条件が指定済みで、解釈・比較・推薦・診断が不要である必要があります。取得と診断の混合依頼や不明なscopeはSol Highへ渡します。CONTROLLER_LEAF/EXPLICITでの広い事実探索は従来どおりです。
+
+Scoutは矛盾や推論の必要性を発見したらESCALATE_SOLを証拠つきで返します。権限/network障害はBLOCKEDまたは承認済みrecoveryであり、model昇格の理由にしません。positive/negative fixtureはS4/S5とS6/S7/S8。offline PASSはlive routing成功の証明ではありません。
+
+phase4では真に難解な制約・推論も、重大な外部影響がないことだけを理由にSolへ固定しません。Astraの対象拡張はA5/A2の対で明示的に評価し、current/phase3は旧基準を保持します。

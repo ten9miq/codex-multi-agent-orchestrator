@@ -44,6 +44,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "DIRECT_LUNA"
         ]
       },
       "requires_verification": false
@@ -88,6 +91,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -134,6 +140,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": false
@@ -179,6 +188,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": false
@@ -223,6 +235,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -271,6 +286,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -315,6 +333,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -361,6 +382,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -405,6 +429,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -451,6 +478,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "SCOUT_LUNA"
         ]
       },
       "requires_verification": false
@@ -495,6 +525,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -541,6 +574,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "SCOUT_LUNA"
         ]
       },
       "requires_verification": false
@@ -585,6 +621,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -633,6 +672,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": false
@@ -677,6 +719,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -723,6 +768,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -767,6 +815,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -813,6 +864,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_ASTRA"
         ]
       },
       "requires_verification": true
@@ -858,6 +912,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_ASTRA"
         ]
       },
       "requires_verification": true
@@ -903,6 +960,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -947,6 +1007,9 @@
           "CONTROLLER_SOL"
         ],
         "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
           "CONTROLLER_SOL"
         ]
       },
@@ -995,6 +1058,10 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL",
+          "CONTROLLER_ASTRA"
         ]
       },
       "requires_verification": true
@@ -1040,6 +1107,9 @@
         ],
         "always_sol": [
           "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_ASTRA"
         ]
       },
       "requires_verification": true

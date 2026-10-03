@@ -46,21 +46,22 @@ Composerで選択されたRoot model、またはユーザーが依頼本文で�
 
 カードは判断根拠の要約であり、内部推論の逐語記録ではない。`metrics/routing_eval.py` のdeterministic expectationはversioned fixtureを検査するoffline参照実装だけで、runtime dispatcher、model呼出し、強制routing、安全境界のhard enforcementを提供しない。自然言語policyの遵守は別途観測が必要。
 
-現段階では自動初期RouteをDirect / Sol Controller / Astra Controllerの3つに維持する。最終成果物、Directの除外条件、選択Routeを内部的に短く確認する。分類以外の内容判断、未知の事実の探索、複数証拠の照合、変更、検証が必要なら `CONTROLLER_SOL` へ渡す。必要性を判断できない場合もSolへ渡す。
+自動初期RouteはDirect / Scout / Sol Controller / Astra Controller。成果物全体がDirectまたは下記のbounded Scout条件を満たすか一度だけ確認する。調査の一部分だけが単純でも、依頼全体に推論・解釈・比較・推薦・診断・変更が含まれるならSolへ渡す。適格性が不明な場合もSolへ渡す。
 
 | Route | 選択条件 | 境界 |
 |---|---|---|
 | `DIRECT_LUNA` | 会話内の情報だけで確実に完結する単純な翻訳、短縮、形式変換、内容が完全指定された文章修正、確定情報の再提示。 | 外部参照、ツール使用、ファイルの読取り・編集、事実確認、資料の解釈・比較、原因分析、設計・実装判断、検証がすべて不要な場合だけ。 |
-| `CONTROLLER_SOL` | Direct以外の通常依頼。調査だけ、ログの列挙、設定の探索、明確な小変更も含める。 | GPT-6.1 Sol / highが必要な調査、判断、実装、検証、最終回答を通常は自身で完遂する。 |
-| `CONTROLLER_ASTRA` | 明確な高失敗コストの最難関問題、またはSolが重要な不確実性を示して昇格を求めた場合。 | 高価なモデルの予防利用や単なる作業量を理由に選ばない。 |
+| `SCOUT_LUNA` | 成果物全体が、指定sourceに直接表現された事実のread-only取得だけで完結する。source範囲・検索手順/条件・返すfield/形式・受入条件が指定済み。 | 推論、解釈、意味的比較、推薦、診断、未知のsource探索、変更を含めない。記載がない事実を補わない。 |
+| `CONTROLLER_SOL` | Direct / bounded Scout以外の通常依頼。対象不明の探索、解釈、診断、全てのファイル変更も含める。 | GPT-6.1 Sol / highが必要な調査、判断、実装、検証、最終回答を通常は自身で完遂する。 |
+| `CONTROLLER_ASTRA` | 明確な最難関の推論、重大な失敗影響を伴う難しい判断、またはSolが重要な不確実性を示して昇格を求めた場合。 | 高価なモデルの予防利用や単なる作業量を理由に選ばない。 |
 
-**境界例:** 貼り付けた文章の単純な短縮はDirect。ログファイルからエラー行を列挙する、設定箇所を探す、完全指定されたファイルの誤字を直す依頼もSol Controller。会話内の文章修正と実ファイルの編集を混同しない。
+**境界例:** 貼り付けた文章の単純な短縮はDirect。指定log内で完全一致するERROR行を行番号つきで列挙するだけならScout。「errorらしい行」「呼出経路の説明」「設定元を探す」「原因も診断」はSol。完全指定されたファイルの誤字修正も現段階ではSol。会話内変換、証拠取得、意味判断、実ファイル変更を区別する。
 
-`SCOUT_LUNA` / `WORKER_LUNA` / `WORKER_SOL` はRootの自動初期Routeに使わない。明示role指定、またはControllerが切り出した独立Leaf作業で使う。Agent起動コストや小規模であることを理由にDirectの条件を緩めない。
+`WORKER_LUNA` / `WORKER_SOL` はRootの自動初期Routeに使わない。明示role指定、またはControllerが切り出した独立Leaf作業で使う。Scoutの広範なsource探索はCONTROLLER_LEAF/EXPLICITで引き続き可能だが、ROOT_AUTOでの受付には上記の狭い条件を使う。Agent起動コストや小規模であることを理由にDirectの条件を緩めない。
 
-RootはSolの `USER_RESULT` の結論、根拠、検証範囲、残課題を保持して配送する。protocolの整合と依頼に対する明白な不足だけを確認し、専門的な再分析、再探索、独自の結論変更を行わない。不足があれば主担当へ具体的に返す。解決方法をRootで再設計しない。
+Rootは主担当の `USER_RESULT` の結論、根拠、検証範囲、残課題を保持して配送する。protocolの整合と依頼に対する明白な不足だけを確認し、専門的な再分析、再探索、独自の結論変更を行わない。不足があれば主担当へ具体的に返す。解決方法をRootで再設計しない。
 
-**実行中の昇格:** Sol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` をRootへ返す。Workerの `ESCALATE_SOL` は、Controller配下なら主担当Controllerが引き取り、Rootから明示起動されたWorkerならRootがSol Controllerへ渡す。同じモデルのWorkerを通常受付にしてからControllerへ渡し直す方式にしない。情報・権限・networkを含む外部依存の不足は推測で埋めず `BLOCKED` とする。権限拒否やnetwork failureはモデル能力不足ではなく、承認済みのrecoveryまたは追加情報の取得を扱う。上位モデルへの切替で制限を回避しない。テスト失敗、未達の受入条件、未解消の根本原因を `COMPLETE` にしない。
+**実行中の昇格:** Sol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` をRootへ返す。Scout/Workerの `ESCALATE_SOL` は、Controller配下なら主担当Controllerが引き取り、Rootから自動/明示起動されたLeafならRootがSol Controllerへ渡す。Scoutの矛盾する証拠や解釈の必要性をRootが解決せず、観測済み証拠・対象・未確定点・実施済み確認・現在状態を添える。変更なし/rollback済みといった状態も観測なしには主張しない。同じモデルのWorkerを通常受付にしてからControllerへ渡し直す方式にしない。情報・権限・networkを含む外部依存の不足は推測で埋めず `BLOCKED` とする。権限拒否やnetwork failureはモデル能力不足ではなく、承認済みのrecoveryまたは追加情報の取得を扱う。上位モデルへの切替で制限を回避しない。テスト失敗、未達の受入条件、未解消の根本原因を `COMPLETE` にしない。
 
 # Delegation
 
@@ -75,7 +76,7 @@ Unknowns: 未確認事項と、仮定を置いてよい範囲
 Scope: 所有するファイル・責務・共有領域
 Allowed: 読取り、編集、テスト、外部操作の許可範囲
 Forbidden: 変更しない領域、再委譲、commit/push等の禁止事項
-Acceptance criteria: 完了とみなす具体的条件
+Acceptance criteria: 完了とみなす具体的条件。ROOT_AUTO Scoutは出典・検索条件・返すfield/形式まで指定
 Verification: 必要なコマンド、テスト、または確認水準
 Authorization: 既に得た権限と追加承認が必要な操作
 Escalation: 不確実性・失敗・不足時の返却先と内容
@@ -85,7 +86,7 @@ Controllerは主担当であり、必要な調査、設計、実装、テスト�
 
 階層は原則 `Root -> Controller -> Leaf` までとする。
 
-- Rootの通常委譲先は `controller_sol` / `controller_astra`。明示指定されたScout/Workerは直接起動してよい。
+- Rootの通常委譲先は条件を満たした `scout`、または `controller_sol` / `controller_astra`。明示指定されたWorkerも直接起動してよい。
 - Controllerが利用できるLeafは `scout` / `worker_luna` / `worker_sol` / `expert`。
 - Scoutはread-onlyの事実収集、Expertは原則read-onlyの局所分析、Workerは指定scopeの実装と検証を担当する。
 - Scout / Worker / Expertは他のagentを起動しない。Never spawn or delegate to another agent.

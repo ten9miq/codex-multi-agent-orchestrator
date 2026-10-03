@@ -16,7 +16,7 @@ Smoke Testはmodel/roleの配線確認であり、下表の意味判断を自動
 | W3 | 既知の複数ファイルにまたがる難しいが境界明確な実装 | `CONTROLLER_SOL` | 実装と検証が必要 |
 | C1 | 原因不明の複数moduleの不具合を調べ、修正方針を決める | `CONTROLLER_SOL` | 調査結果の統合と設計判断が必要 |
 
-Rootの自動初期Routeは、会話内の情報だけで完結するD1を除き`CONTROLLER_SOL`とする。`SCOUT_LUNA` / `WORKER_LUNA` / `WORKER_SOL`は明示role指定か、Controllerが独立したLeaf作業として切り出したときだけ使う。実際の動作を伴うW1～W3は使い捨てrepositoryで行い、差分と必要なテストを確認する。Astraのケースは通常の回帰実行から外し、必要時だけ別途確認する。
+変更前currentとphase3では、会話内の情報だけで完結するD1を除き`CONTROLLER_SOL`とする。`SCOUT_LUNA` / `WORKER_LUNA` / `WORKER_SOL`は明示role指定か、Controllerが独立したLeaf作業として切り出したときだけ使う。実際の動作を伴うW1～W3は使い捨てrepositoryで行い、差分と必要なテストを確認する。Astraのケースは通常の回帰実行から外し、必要時だけ別途確認する。
 
 ## `worker_sol` High / Medium 比較
 
@@ -44,7 +44,7 @@ python metrics/routing_eval.py --observations /path/to/reviewed-observations.jso
 
 各runには以下を記録する。
 
-- `run_id`、`case_id`、`policy` (`current / phase3 / always_sol`)
+- `run_id`、`case_id`、`policy` (`current / phase3 / phase4 / always_sol`)
 - 実際の `actual_initial_route`、`route_evidence` (Rootの決定が確認できる記録参照)
 - 実際の `actual_spawned_role` と `spawn_evidence` (spawn記録参照)。Directはroleを明示的にnullとし、未spawnを確認できる記録を付ける。同じmodelのWorker/Controllerをmodel名から推定しない。
 - `root_tool_calls`、`root_file_access`。Directは0/falseでなければ契約違反。
@@ -65,3 +65,11 @@ python metrics/routing_eval.py --observations /path/to/reviewed-observations.jso
 ### 初期Routeと実行中昇格の区別
 
 A3は調査後のAstra昇格があり得ても、初期acceptable routeはSolだけ。`actual_final_route` と `final_route_evidence`、`escalation_events` (from_route/to_route/evidence) は初期routeとは別に保存する。A4は初期証拠の段階からSol/Astra両方が妥当なケースで、複数許容route setを検査する。phase3は旧3-route基準を維持し、低consequenceでhardだけのA5はSol。hard推論へのAstra拡張は後続policy変更として明示的に扱う。
+
+## Phase 4: bounded Scoutのpositive/negative対
+
+phase4はS4 (指定JSON field) とS6 (指定logの完全一致行) をScoutとして許容する。S5の推薦、S7の診断、S8の未知source/検索はSol High。S1/S3の未特定source探索、S2の意味的比較は既存9件のSol期待を維持する。範囲や方法が不明なら安価routeの成立を推測しない。
+
+Scoutがsourceの矛盾や意味判断の必要性を発見した場合はESCALATE_SOL。権限/network不足はBLOCKED/recoveryで、能力の昇格とは別。ROOT_AUTOの狭い条件はCONTROLLER_LEAF/EXPLICITに機械的に適用しない。`scout` の出力statusを静的に検査するテストも実際のmodel遵守を証明しない。
+
+phase4ではbounded Scoutの追加とともに、低consequenceでも真に難解な制約・推論を伴うA5をAstra許容へ明示的に拡張する。単なる長さ・作業量・自称hardでは足りず、feature evidenceが必要。通常designのA2はSolのまま。current/phase3の比較基準は変更しない。

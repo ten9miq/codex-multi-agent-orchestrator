@@ -31,6 +31,38 @@ class RoutingEvaluationTests(unittest.TestCase):
             expected = 'DIRECT_LUNA' if id == 'D1' else 'CONTROLLER_SOL'
             self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase3'), expected)
 
+    def test_bounded_scout_whole_task_positive_and_negative_pairs(self):
+        for id in ('S4','S6'):
+            self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase4'), 'SCOUT_LUNA')
+            self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase3'), 'CONTROLLER_SOL')
+        for id in ('S1','S2','S3','S5','S7','S8'):
+            self.assertEqual(expected_route(self.cases[id]['feature_card'], 'phase4'), 'CONTROLLER_SOL')
+
+    def test_phase4_explicitly_expands_hard_reasoning_boundary(self):
+        self.assertEqual(expected_route(self.cases['A5']['feature_card'], 'phase4'), 'CONTROLLER_ASTRA')
+        self.assertEqual(expected_route(self.cases['A2']['feature_card'], 'phase4'), 'CONTROLLER_SOL')
+        self.assertEqual(expected_route(self.cases['A5']['feature_card'], 'current'), 'CONTROLLER_SOL')
+
+    def test_scout_blocker_is_not_automatic_model_escalation(self):
+        run=self.run_record('S4','SCOUT_LUNA','scout','phase4')
+        run['completion'].update(status='BLOCKED',acceptance_met=False,verification='NOT_RUN',
+                                 evidence=['synthetic:network-denied'])
+        result=score_run(self.cases['S4'],run)
+        self.assertTrue(result['route_match'])
+        self.assertFalse(result['completion_proven'])
+        self.assertEqual(result['escalation_events'],[])
+        self.assertIsNone(result['observed_final_route'])
+
+    def test_scout_role_preserves_leaf_scope_and_escalation(self):
+        import tomllib
+        role=tomllib.loads((Path(__file__).parents[1]/'agents/scout.toml').read_text())
+        instructions=role['developer_instructions']
+        self.assertIn('COMPLETE|ESCALATE_SOL|BLOCKED', instructions)
+        self.assertIn('CONTROLLER_LEAF', instructions)
+        self.assertIn('EXPLICIT', instructions)
+        self.assertIn('ROOT_AUTO', instructions)
+        self.assertEqual(role['sandbox_mode'], 'read-only')
+
     def test_hard_reasoning_and_ordinary_design_pair(self):
         self.assertEqual(expected_route(self.cases['A1']['feature_card'], 'phase3'), 'CONTROLLER_ASTRA')
         self.assertEqual(expected_route(self.cases['A2']['feature_card'], 'phase3'), 'CONTROLLER_SOL')

@@ -169,12 +169,13 @@ RESULT: PASS (TURN_CONTEXT_PROFILE_ONLY)
 
 上のSmoke Testは、promptで**指定した**role、model、effort、turn_contextのservice_tier、treeを`smoke.py --expect`で確認する配線検証です。合成fixtureのPASSも実rolloutのPASSも、childの実requestで速度overrideが成功した証明にはなりません。新しいrolloutでもturn_contextは`observed_turn`に留まり、request payload/traceがなければ`REQUEST_TIER: UNVERIFIED`です。Rootの自動routingやtoken効率も証明しません。
 
-自動Routing Testは、agent名を指定せず、固定した自然言語ケースを新規sessionで一件ずつ実行する運用評価である。開始時刻をケースごとに記録し、`collect.py`と`report.py`で実際の`initial_route`、完了、初回完遂、手戻り、token、subagent数を確認する。現在のMetricsは受動解析であり、期待routeとの突合や設定の自動変更は行わない。
+自動Routing Testは、agent名を指定せず、固定した自然言語ケースを新規sessionで一件ずつ実行する運用評価である。開始時刻をケースごとに記録し、`collect.py`と`report.py`で実際の`initial_route`、完了、初回完遂、手戻り、token、subagent数を確認する。既存のcollect/reportは受動解析で設定の自動変更を行わない。offlineの期待route突合は `routing_eval.py` とversioned fixtureで別途行う。どちらも自然言語routeの意味的正しさを自動証明しない。
 
 | ケース | promptの要旨 | 期待する最小route | 観測上の失敗 |
 |---|---|---|---|
 | Direct | 「次の文章を短くして」など会話内の情報だけで完結する単純な変換 | `DIRECT_LUNA` | 外部参照・tool・ファイル操作・内容判断が必要ならDirect成立条件違反。 |
-| 事実探索 | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `CONTROLLER_SOL` | RootがDirectまたはScoutを自動初期Routeに選んだら不一致。 |
+| 事実探索 | 「変更せず、このsymbolの呼出経路と関連testを調べて」 | `CONTROLLER_SOL` | この呼出経路・関連testの探索はbounded Scout条件を満たさず、Direct/Scoutなら不一致。 |
+| 指定の事実取得 | 「指定logの完全一致ERROR行を行番号つきで全件列挙」だけ | `SCOUT_LUNA` | 推論・原因診断を足すならSol。source/検索/受入条件が不明ならSol。 |
 | 小変更 | 「指定fileのtypoを修正して」 | `CONTROLLER_SOL` | 実ファイルの確認・編集が必要。 |
 | 明白なbug修正 | 「この明白なbugを指定fileで修正し、対象testを通して」 | `CONTROLLER_SOL` | 挙動変更と検証が必要。 |
 | 難しい既知の実装 | 「対象moduleと受入条件が明確な非自明の修正をして」 | `CONTROLLER_SOL` | 必要なら独立したLeaf作業だけを切り出す。 |

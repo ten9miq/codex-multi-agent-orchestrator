@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = 1
-POLICIES = ('current', 'phase3', 'always_sol')
+POLICIES = ('current', 'phase3', 'phase4', 'always_sol')
 AXES = {
     'scope': {'conversation', 'bounded_retrieval', 'localized_change', 'multicomponent', 'unknown'},
     'method': {'exact_text', 'direct_retrieval', 'exact_transform', 'semantic', 'investigate', 'unknown'},
@@ -66,11 +66,17 @@ def expected_route(card: dict, policy: str) -> str:
         return 'CONTROLLER_SOL'
     if card['unknowns'] or 'unknown' in values.values():
         return 'CONTROLLER_SOL'
+    if policy == 'phase4' and values['reasoning'] == 'hard':
+        return 'CONTROLLER_ASTRA'
     if values['consequence'] == 'high_impact' and values['reasoning'] in {'hard', 'design', 'diagnosis'}:
         return 'CONTROLLER_ASTRA'
     if values == dict(scope='conversation', method='exact_text', context='conversation',
                       reasoning='none', verification='not_needed', consequence='low'):
         return 'DIRECT_LUNA'
+    if policy == 'phase4' and values == dict(
+            scope='bounded_retrieval', method='direct_retrieval', context='specified_sources',
+            reasoning='lookup', verification='readback', consequence='low'):
+        return 'SCOUT_LUNA'
     return 'CONTROLLER_SOL'
 
 
