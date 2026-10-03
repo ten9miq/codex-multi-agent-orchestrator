@@ -1,0 +1,1048 @@
+{
+  "schema_version": 1,
+  "fixture_version": "bounded-routing-v1",
+  "description": "Reviewed policy expectations. No model runs are included.",
+  "cases": [
+    {
+      "id": "D1",
+      "prompt": "次の文章だけを短くして: 会議は火曜日の午後3時に始まります。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "D2",
+      "feature_card": {
+        "scope": {
+          "value": "conversation",
+          "evidence": "Request: 次の文章だけを短くして: 会議は火曜日の午後3時に始まります。"
+        },
+        "method": {
+          "value": "exact_text",
+          "evidence": "Request: 次の文章だけを短くして: 会議は火曜日の午後3時に始まります。"
+        },
+        "context": {
+          "value": "conversation",
+          "evidence": "Request: 次の文章だけを短くして: 会議は火曜日の午後3時に始まります。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: 次の文章だけを短くして: 会議は火曜日の午後3時に始まります。"
+        },
+        "verification": {
+          "value": "not_needed",
+          "evidence": "Request: 次の文章だけを短くして: 会議は火曜日の午後3時に始まります。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: 次の文章だけを短くして: 会議は火曜日の午後3時に始まります。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "DIRECT_LUNA"
+        ],
+        "phase3": [
+          "DIRECT_LUNA"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "D2",
+      "prompt": "貼ったコードの意味を説明して: x = y.get(k, expensive())",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "D1",
+      "feature_card": {
+        "scope": {
+          "value": "conversation",
+          "evidence": "Request: 貼ったコードの意味を説明して: x = y.get(k, expensive())"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 貼ったコードの意味を説明して: x = y.get(k, expensive())"
+        },
+        "context": {
+          "value": "conversation",
+          "evidence": "Request: 貼ったコードの意味を説明して: x = y.get(k, expensive())"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: 貼ったコードの意味を説明して: x = y.get(k, expensive())"
+        },
+        "verification": {
+          "value": "not_needed",
+          "evidence": "Request: 貼ったコードの意味を説明して: x = y.get(k, expensive())"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: 貼ったコードの意味を説明して: x = y.get(k, expensive())"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S1",
+      "prompt": "このrepositoryでfoo関数の呼び出し元を調べて。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S4",
+      "feature_card": {
+        "scope": {
+          "value": "bounded_retrieval",
+          "evidence": "Request: このrepositoryでfoo関数の呼び出し元を調べて。"
+        },
+        "method": {
+          "value": "investigate",
+          "evidence": "Request: このrepositoryでfoo関数の呼び出し元を調べて。"
+        },
+        "context": {
+          "value": "unbounded",
+          "evidence": "Request: このrepositoryでfoo関数の呼び出し元を調べて。"
+        },
+        "reasoning": {
+          "value": "lookup",
+          "evidence": "Request: このrepositoryでfoo関数の呼び出し元を調べて。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: このrepositoryでfoo関数の呼び出し元を調べて。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: このrepositoryでfoo関数の呼び出し元を調べて。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S2",
+      "prompt": "現在の実装と過去commitを比較して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": null,
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 現在の実装と過去commitを比較して。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 現在の実装と過去commitを比較して。"
+        },
+        "context": {
+          "value": "unbounded",
+          "evidence": "Request: 現在の実装と過去commitを比較して。"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: 現在の実装と過去commitを比較して。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: 現在の実装と過去commitを比較して。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: 現在の実装と過去commitを比較して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S3",
+      "prompt": "設定値がどこで定義されているか調べて。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S4",
+      "feature_card": {
+        "scope": {
+          "value": "bounded_retrieval",
+          "evidence": "Request: 設定値がどこで定義されているか調べて。"
+        },
+        "method": {
+          "value": "investigate",
+          "evidence": "Request: 設定値がどこで定義されているか調べて。"
+        },
+        "context": {
+          "value": "unbounded",
+          "evidence": "Request: 設定値がどこで定義されているか調べて。"
+        },
+        "reasoning": {
+          "value": "lookup",
+          "evidence": "Request: 設定値がどこで定義されているか調べて。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: 設定値がどこで定義されているか調べて。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: 設定値がどこで定義されているか調べて。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "W1",
+      "prompt": "docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。"
+        },
+        "verification": {
+          "value": "unknown",
+          "evidence": "Request: docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: docs/title.txtの1行目をtehからtheへ変更して。既存の確認方法は未指定。"
+        },
+        "unknowns": [
+          "既存の決定的な確認方法が未指定"
+        ]
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W2",
+      "prompt": "既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: 既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: 既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。"
+        },
+        "verification": {
+          "value": "existing_deterministic",
+          "evidence": "Request: 既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: 既知の1ファイルsrc/parser.pyの空入力bugを修正して、対象testを通して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W3",
+      "prompt": "既知の複数moduleに非自明な新しいserializationを実装して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": null,
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 既知の複数moduleに非自明な新しいserializationを実装して。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 既知の複数moduleに非自明な新しいserializationを実装して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 既知の複数moduleに非自明な新しいserializationを実装して。"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: 既知の複数moduleに非自明な新しいserializationを実装して。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: 既知の複数moduleに非自明な新しいserializationを実装して。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: 既知の複数moduleに非自明な新しいserializationを実装して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "C1",
+      "prompt": "原因不明の複数moduleの不具合を調べ、修正方針を決めて。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": null,
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 原因不明の複数moduleの不具合を調べ、修正方針を決めて。"
+        },
+        "method": {
+          "value": "investigate",
+          "evidence": "Request: 原因不明の複数moduleの不具合を調べ、修正方針を決めて。"
+        },
+        "context": {
+          "value": "unbounded",
+          "evidence": "Request: 原因不明の複数moduleの不具合を調べ、修正方針を決めて。"
+        },
+        "reasoning": {
+          "value": "diagnosis",
+          "evidence": "Request: 原因不明の複数moduleの不具合を調べ、修正方針を決めて。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: 原因不明の複数moduleの不具合を調べ、修正方針を決めて。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: 原因不明の複数moduleの不具合を調べ、修正方針を決めて。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "S4",
+      "prompt": "docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S5",
+      "feature_card": {
+        "scope": {
+          "value": "bounded_retrieval",
+          "evidence": "Request: docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。"
+        },
+        "method": {
+          "value": "direct_retrieval",
+          "evidence": "Request: docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。"
+        },
+        "reasoning": {
+          "value": "lookup",
+          "evidence": "Request: docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: docs/status.jsonだけを読み、JSON key release.versionとrelease.dateの文字列をそのまま列挙して。受入条件は2つの値とkeyの出典。解釈や推奨は不要。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S5",
+      "prompt": "docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S4",
+      "feature_card": {
+        "scope": {
+          "value": "bounded_retrieval",
+          "evidence": "Request: docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: docs/status.jsonのrelease.versionとrelease.dateを読み、リリースを延期すべきか判断して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S6",
+      "prompt": "logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S7",
+      "feature_card": {
+        "scope": {
+          "value": "bounded_retrieval",
+          "evidence": "Request: logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。"
+        },
+        "method": {
+          "value": "direct_retrieval",
+          "evidence": "Request: logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。"
+        },
+        "reasoning": {
+          "value": "lookup",
+          "evidence": "Request: logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: logs/build.txt内の文字列ERRORに完全一致する行を、行番号とともに全件列挙して。対象はこのファイルだけ。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S7",
+      "prompt": "logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S6",
+      "feature_card": {
+        "scope": {
+          "value": "bounded_retrieval",
+          "evidence": "Request: logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。"
+        },
+        "method": {
+          "value": "investigate",
+          "evidence": "Request: logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。"
+        },
+        "reasoning": {
+          "value": "diagnosis",
+          "evidence": "Request: logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: logs/build.txt内のERROR行を列挙し、ビルドが失敗した原因を診断して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "S8",
+      "prompt": "指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "S6",
+      "feature_card": {
+        "scope": {
+          "value": "unknown",
+          "evidence": "Request: 指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。"
+        },
+        "method": {
+          "value": "unknown",
+          "evidence": "Request: 指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。"
+        },
+        "context": {
+          "value": "unknown",
+          "evidence": "Request: 指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。"
+        },
+        "reasoning": {
+          "value": "lookup",
+          "evidence": "Request: 指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: 指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: 指定ファイルのerrorらしき項目を探して。対象と検索方法は後で決める。"
+        },
+        "unknowns": [
+          "対象sourceと検索条件が未指定"
+        ]
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "W4",
+      "prompt": "docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W2",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。"
+        },
+        "verification": {
+          "value": "existing_deterministic",
+          "evidence": "Request: docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: docs/title.txtの1行目だけをtehからtheへ完全一致置換。通常文書の誤字で可逆。既存のpython tests/check_title.pyが期待文字列と差分範囲を決定的に確認するため、それを実行して成功を確認。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W5",
+      "prompt": "auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。"
+        },
+        "verification": {
+          "value": "existing_deterministic",
+          "evidence": "Request: auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。"
+        },
+        "consequence": {
+          "value": "protected",
+          "evidence": "Request: auth/policy.jsonのallowAdmin値をfalseからtrueへ完全一致置換して。既存schema testはある。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W6",
+      "prompt": "docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: docs/title.txtのtehをtheへ変更して、適切な新しいテストを設計して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W7",
+      "prompt": "1ファイルのキャッシュの整合性設計を直し、既存testを通して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: 1ファイルのキャッシュの整合性設計を直し、既存testを通して。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 1ファイルのキャッシュの整合性設計を直し、既存testを通して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 1ファイルのキャッシュの整合性設計を直し、既存testを通して。"
+        },
+        "reasoning": {
+          "value": "hard",
+          "evidence": "Request: 1ファイルのキャッシュの整合性設計を直し、既存testを通して。"
+        },
+        "verification": {
+          "value": "existing_deterministic",
+          "evidence": "Request: 1ファイルのキャッシュの整合性設計を直し、既存testを通して。"
+        },
+        "consequence": {
+          "value": "high_impact",
+          "evidence": "Request: 1ファイルのキャッシュの整合性設計を直し、既存testを通して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_ASTRA"
+        ],
+        "phase3": [
+          "CONTROLLER_ASTRA"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "A1",
+      "prompt": "分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "A2",
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。"
+        },
+        "reasoning": {
+          "value": "hard",
+          "evidence": "Request: 分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: 分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。"
+        },
+        "consequence": {
+          "value": "high_impact",
+          "evidence": "Request: 分散状態の破壊的migrationについて、整合性の証明と重大な失敗影響を踏まえ設計判断して。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_ASTRA"
+        ],
+        "phase3": [
+          "CONTROLLER_ASTRA"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "A2",
+      "prompt": "低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "A1",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: 低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。"
+        },
+        "reasoning": {
+          "value": "design",
+          "evidence": "Request: 低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: 低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: 低riskな通常moduleの設計を比較して。難解な推論や重大な失敗影響はない。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "A3",
+      "prompt": "通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": null,
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。"
+        },
+        "method": {
+          "value": "investigate",
+          "evidence": "Request: 通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。"
+        },
+        "reasoning": {
+          "value": "diagnosis",
+          "evidence": "Request: 通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。"
+        },
+        "verification": {
+          "value": "readback",
+          "evidence": "Request: 通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: 通常の原因分析だが、調査で重大な分散状態の不確実性が判明したらAstraへ昇格する。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": false
+    },
+    {
+      "id": "A4",
+      "prompt": "既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": null,
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。"
+        },
+        "reasoning": {
+          "value": "hard",
+          "evidence": "Request: 既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: 既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。"
+        },
+        "consequence": {
+          "value": "high_impact",
+          "evidence": "Request: 既に提示された分散状態の障害証拠から重大riskの設計判断を行う。Solの既知手法で扱えるか、最難関としてAstraが必要かは初期証拠から両方が妥当。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL",
+          "CONTROLLER_ASTRA"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL",
+          "CONTROLLER_ASTRA"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "A5",
+      "prompt": "局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "A1",
+      "feature_card": {
+        "scope": {
+          "value": "multicomponent",
+          "evidence": "Request: 局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。"
+        },
+        "method": {
+          "value": "semantic",
+          "evidence": "Request: 局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: 局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。"
+        },
+        "reasoning": {
+          "value": "hard",
+          "evidence": "Request: 局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。"
+        },
+        "verification": {
+          "value": "new_check",
+          "evidence": "Request: 局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。"
+        },
+        "consequence": {
+          "value": "low",
+          "evidence": "Request: 局所的で低riskだが難解な制約充足の推論を行う。失敗しても外部影響はない。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    }
+  ]
+}
