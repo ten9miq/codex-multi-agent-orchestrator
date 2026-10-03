@@ -38,6 +38,8 @@ python "$env:USERPROFILE\.codex\metrics\timeline.py" --minutes 30 --show-tokens
 | `collect.py` | rollout を turn 単位の `routing-metrics.jsonl` に収集 |
 | `report.py` | Routing 品質、token、昇格、待機、返却結果サイズを集計 |
 | `timeline.py` | Session → Turn → Agent tree または event 時系列を表示 |
+| `api_cost.py` | 根拠付きrequest APIと現行turnの未分類coverage。実rollout adapterは未接続 |
+| `api-pricing-2026-10-03.json` | model別の検証済み短/長文脈API参考単価snapshot |
 | `cost-weights.json` | API Standard短文脈単価によるUSD換算の参考値 |
 | `codex-credit-rates.json` | Codex Standard速度を基準にした追加クレジット単価の参考値 |
 | `state.json` | `collect.py` の rollout 解析キャッシュ |
@@ -61,6 +63,7 @@ python "$env:USERPROFILE\.codex\metrics\timeline.py" --minutes 30 --show-tokens
 - [Smoke Test と配線検証](docs/SMOKE.md)
 - [収集・キャッシュ・token accounting](docs/COLLECT.md)
 - [レポートの項目と options](docs/REPORT.md)
+- [根拠付きAPI token料金・未分類coverage](docs/API-COST.md)
 - [Timeline の tree・events・live 表示](docs/TIMELINE.md)
 - [Metrics JSONL field 定義](docs/METRICS-JSONL.md)
 - [運用とトラブルシューティング](docs/OPERATIONS.md)

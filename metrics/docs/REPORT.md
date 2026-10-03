@@ -41,7 +41,7 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 | セクション | 項目の意味 |
 |---|---|
 | 冒頭 | `対象期間` はUTCに正規化した半開区間。`Root turn数` は Root 行数、`ユニークRoot thread/session数` は同じ会話内の複数turnを重複計上しない数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
-| Service tierの証拠と算定範囲 | configured / observed_turn / requestedを分離。現行readerのrequest coverageは0、request数はUNKNOWN、短/長文脈は未分類。旧rowの単一tierもrequest証拠には使わない。 |
+| Service tierの証拠と算定範囲 | configured / observed_turn / requestedを分離。現行readerの算定可能turnは0/N、request数はUNKNOWN、短/長文脈はN/N turnが未分類。request数を測定したcoverageではない。旧rowの単一tierもrequest証拠には使わない。 |
 | 初期ルート | Root の `initial_route` 分布。Root がなければその旨を表示。 |
 | 最初に観測したnamed spawn role | Root turnごとの`first_spawn_role`分布。未観測は`UNKNOWN`と表示する。Route別の集計や`initial_route`/`final_route`の推定には使わない。 |
 | 初期Route判定の出所 | `initial_route_source`別の件数と、旧Metricsでモデルから推定された`DIRECT_LUNA`件数を表示する。現行解析はモデル名やtool未使用だけではRouteを推定しない。spawnされたroleはRoot自身の初期意図の証明ではない。 |
@@ -58,6 +58,12 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 | タスク単位token分布 | `(root_thread_id, root_turn_id)` ごとに Root と帰属 subagent の total token を合算し、平均・中央値・P90を表示。 |
 | Coordination / 待機 | `キャッシュ入力比率` は cached input / input、`wait/status系tool call` は call 数、`status-only token` はその token と全 total に占める割合。 |
 | API USD換算 / Codex追加クレジット換算 | 明示--scenario-tier時だけ、それぞれの単価ファイルから別々の参考シナリオを計算する。追加クレジット換算はプラン内利用枠の減少量ではない。 |
+
+## API request料金の観測範囲
+
+`api_cost.rollout_cost_coverage`が既存turnの根拠不足を判定し、算定可能turnと短/長文脈未分類turnの両件数を表示します。request単位のadapterは未接続で、実request数や料金は推定しません。行に未知のrequest風fieldを追加しても証拠として採用しません。
+
+正規化されたrequest根拠のための独立Python API、model別・確認日付きの料金snapshot、cache writeを含む正しい計算方法は[根拠付きAPI token料金推計](API-COST.md)を参照してください。このsnapshotをturn総量へ適用するCLI optionはありません。短文脈参考シナリオと長文脈request推計を混在させません。
 
 ## 重み付きコスト
 
