@@ -40,11 +40,12 @@ Root routing指示も`CODEX_HOME/AGENTS.md`へ適用する場合は、既存フ�
 
 ## 中心思想
 
-Rootは `gpt-6-luna / medium / Standard` の薄いRouterです。会話内で確実に完結する単純な処理だけをDirectで行い、調査・判断・ファイル操作・実装・検証が必要な通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
+Rootは `gpt-6-luna / medium / Standard` の薄いRouterです。会話内の単純処理はDirect、source・検索・受入条件が指定済みで成果物全体が直接記載された事実の取得だけならScoutとし、それ以外の通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
 
 ```text
 Luna Medium / Standard Root
   ├─ DIRECT_LUNA       会話内だけで完結する単純処理
+  ├─ SCOUT_LUNA        指定sourceの直接記載された事実を取得
   ├─ CONTROLLER_SOL    調査・判断・実装・検証の通常主担当
   │    └─ 必要な場合だけScout / Worker / Expert
   └─ CONTROLLER_ASTRA  例外的な高失敗コストの判断
@@ -68,16 +69,19 @@ Rootとすべてのactive roleはallStandardとし、それぞれ `service_tier 
 | 依頼の状態 | 自動初期Route | 例 |
 |---|---|---|
 | 会話内だけで確実に完結し、ツール・事実確認・内容判断が不要 | `DIRECT_LUNA` | 単純な翻訳、短縮、形式変換、完全指定された文章修正 |
-| 調査・判断・ファイル操作・実装・検証が必要、または必要性が不明 | `CONTROLLER_SOL` | 設定探索、ログ列挙、ファイルの誤字修正、原因分析、実装 |
-| 明確な最難関の高失敗コスト問題、またはSolからの必要な昇格 | `CONTROLLER_ASTRA` | Solで重要な不確実性が残る問題 |
+| 指定source・検索・受入条件で、成果物全体が直接記載された事実の取得 | `SCOUT_LUNA` | 指定logの完全一致行・指定JSON fieldの列挙 |
+| 解釈・診断・変更・検証が必要、source不明、または安価routeの適格性が不明 | `CONTROLLER_SOL` | 設定探索、ログ列挙、ファイルの誤字修正、原因分析、実装 |
+| 明確な最難関の推論、重大失敗影響の判断、またはSolからの必要な昇格 | `CONTROLLER_ASTRA` | Solで重要な不確実性が残る問題 |
 
-Scout/Workerは明示role指定、またはController配下のLeafで使います。通常依頼のRoot初期Routeには使いません。Directの条件は小規模であることやagent起動コストを理由に緩めません。詳細とcanonical sourceは[`AGENTS.md`](AGENTS.md)です。
+Workerは明示role指定、またはController配下のLeafで使います。ScoutのROOT_AUTOは狭い完全指定の取得だけで、CONTROLLER_LEAF/EXPLICITの探索契約は維持します。推論・比較・推薦・診断を含む混合依頼はSolです。Directの条件は小規模であることやagent起動コストを理由に緩めません。詳細とcanonical sourceは[`AGENTS.md`](AGENTS.md)です。
 
 ## Contextと結果の扱い
 
 子agentには原則`fork_turns = "none"`を使い、Rootの長い履歴を複製しません。代わりに次のtask packetを渡します。
 
 ```text
+Routing mode: ROOT_AUTO | CONTROLLER_LEAF | EXPLICIT
+Feature card: scope / method / context / reasoning / verification / consequence + evidence / unknowns
 Objective
 Known facts / evidence
 Unknowns
