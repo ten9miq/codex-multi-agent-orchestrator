@@ -34,7 +34,7 @@ python "$env:USERPROFILE\.codex\metrics\timeline.py" --minutes 30 --show-tokens
 | ファイル | 役割 |
 |---|---|
 | `rollout_reader.py` | JSONL 解析の共通ライブラリ。通常は直接実行しません |
-| `smoke.py` | Root/Child/Grandchild の実効 model・effort・service_tier・V2・role 配線を検証 |
+| `smoke.py` | Root/Child/Grandchild のturn設定観測・V2・role配線を検証。request tierは別の証拠 |
 | `collect.py` | rollout を turn 単位の `routing-metrics.jsonl` に収集 |
 | `report.py` | Routing 品質、token、昇格、待機、返却結果サイズを集計 |
 | `timeline.py` | Session → Turn → Agent tree または event 時系列を表示 |
@@ -50,7 +50,10 @@ python "$env:USERPROFILE\.codex\metrics\timeline.py" --minutes 30 --show-tokens
 - machine-readable な field 名は互換性のため英語のまま固定です。
 - `first_spawn_role` はRoot turnで最初に観測した既知のnamed spawn roleです。選択された`initial_route`とは独立に集計し、Routeの推定には使いません。
 - API USD換算とCodex追加クレジット換算は別の推計です。どちらもCodexのプラン内利用枠の減少量や請求額を表しません。料金表の日付・出典・速度条件は各JSONに記録します。
-- `service_tier=priority` は Fast、`default` は Standard として記録します。欠損・未知の値は `UNKNOWN` とし、Smoke Testでは未検証、料金推計では算定対象外です。Rootと全active childはStandardを期待します。FastのAPI・追加クレジット推計にはStandard単価の2倍を使います。プラン内利用枠の2.5倍係数を追加クレジットへ適用しません。
+- `turn_context.service_tier` は `observed_turn` の証拠です。`priority`→`fast`、`default`→`standard`に正規化しますが、実requestへの適用を証明しません。全観測の出所・順序・値を保存し、turn内で変更・未知値・欠損があればsummaryは`UNKNOWN`です。次turnへtierを持ち越しません。
+- `configured_service_tier`、`observed_service_tier`、`requested_service_tier`を分離します。現行readerは設定ファイルもrequest traceも読まないため、configured/requestedは`UNKNOWN`、request適用は`UNVERIFIED`です。旧cacheは元rolloutから再解析し、現在のconfigで過去を補完しません。
+- Smokeは全active roleで`standard`を期待し、成功は`RESULT: PASS (TURN_CONTEXT_PROFILE_ONLY)`と表示します。これは観測されたturn設定と配線に限るPASSで、`REQUEST_TIER: UNVERIFIED`は別に残ります。
+- 料金の既定動作は未算定です。比較用には`report.py --scenario-tier standard`（または`fast`）を明示すると、全tokenへ速度を仮定した短文脈基準値を出せます。Fastシナリオは基準単価の2倍ですが、cache write・長文脈などのrequest条件は再現しません。API USD、Codex追加クレジット、Pro等のプラン内利用枠は別概念で、プラン内利用枠消費は推定できません。
 - `rework_class` は連続Root turnの次発話を `NONE` / `USER_FOLLOWUP` / `MODEL_CORRECTION` / `UNKNOWN` に控えめに分類します。`possible_immediate_rework` は互換用の旧heuristicです。
 
 ## 詳細

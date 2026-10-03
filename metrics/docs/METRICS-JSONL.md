@@ -12,7 +12,13 @@
 | `agent_role` | `scout` / `worker_luna` / `worker_sol` 等の role |
 | `route` / `initial_route` / `final_route` / `effective_route` | 互換用の最終 Route / 最初の Route / 最終 Route / レポートで用いる実効 Route。`effective_route` は `final_route` の後方互換 alias。 |
 | `first_spawn_role` | 当該turnのrolloutで最初に観測した、既知のnamed `spawn_agent.agent_type`。該当なしは`null`。実行の観測値であり、Rootが選択したRouteや初期意図の証拠には使わない。 |
-| `model` / `reasoning_effort` / `service_tier` / `multi_agent_version` | 実効 model、effort、速度（`fast` / `standard` / `UNKNOWN`）、V1/V2。`priority` は `fast` に正規化し、欠損は推測しない。 |
+| `model` / `reasoning_effort` / `multi_agent_version` | rolloutに記録されたmodel、effort、V1/V2。 |
+| `tier_schema_version` | tier evidence schema。現在は`1`。collect cacheのversionとは別。 |
+| `service_tier` / `observed_service_tier` | turn_context観測の集約値（`fast` / `standard` / `UNKNOWN`）。前者は後方互換alias。全観測が同じ既知値のときだけ既知とし、mixed・欠損・未知値は`UNKNOWN`。request全体に適用された速度ではない。 |
+| `service_tier_source` / `service_tier_evidence` | 現行readerは`turn_context.service_tier` / `observed_turn`。観測なしは`null` / `unknown`。欠損値を含むcontextを見た場合も、値が未知であるという観測の出所は残す。 |
+| `service_tier_observations` | 順序付き配列。各要素は`timestamp`、`event_index`（1始まりの読み取りevent順）、`turn_id`、`raw_value`（文字列またはnull）、`value`（正規化）、`source`、`evidence`。途中の変更や欠損も保持する。 |
+| `configured_service_tier` / `configured_service_tier_source` | 設定ファイルを読まない現行readerは`UNKNOWN` / `null`。現在のconfigで過去turnを補完しない。 |
+| `requested_service_tier` / `requested_service_tier_source` / `request_tier_status` | 実request traceのadapterがないため`UNKNOWN` / `null` / `UNVERIFIED`。turn_context、model名、設定、旧cacheでは補完しない。 |
 | `execution_mode` | `ORCHESTRATED_ROUTE` はV2/agent role/protocol Routeを観測できたturn、`LEGACY_ROOT_MODEL` は旧名称の互換値。これだけではRouteを判定しない。旧JSONLでfieldがなければreportは`UNKNOWN`。 |
 | `input_tokens` / `cached_input_tokens` / `output_tokens` / `reasoning_tokens` / `total_tokens` | turn の token 内訳 |
 | `context_window` / `context_tokens` / `context_peak_tokens` | `last_token_usage` から得た実効context window、現在値、turn内peak。累積tokenではない。 |
@@ -46,3 +52,5 @@ assistant出力だけから抽出します。tool引数、user/developer prompt�
 `ROUTER_VERIFY`等は採用しません。明示`ROUTER_STATUS`がなければ、終了時刻を伴う
 `task_complete`/`turn_complete` eventからだけ`status=COMPLETE`を補完します。一方で
 `verification=UNKNOWN`のままであり、`NOT_RUN`は明示protocolがある場合だけ記録されます。
+
+旧Metrics JSONLにtier provenanceがない場合、reportはtier evidenceをUNKNOWNとして表示し、`service_tier`が既知でもrequest単位の料金推計には使いません。`--scenario-tier`は明示的な仮定による別計算です。timestamp付き観測列があっても、request IDとusageへの確実な関連付けがない限り実requestの料金分類には使いません。

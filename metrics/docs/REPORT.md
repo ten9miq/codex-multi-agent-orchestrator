@@ -21,6 +21,7 @@ python "$env:USERPROFILE\.codex\metrics\report.py" --since $Until.AddDays(-7).To
 | `--until DATETIME` | 終了日時（含まない） | なし |
 | `--weights PATH` | API USD換算の参考単価 JSON | `~/.codex/metrics/cost-weights.json` |
 | `--credit-rates PATH` | Codex Standard速度を基準にした追加クレジット参考単価 JSON | `~/.codex/metrics/codex-credit-rates.json` |
+| `--scenario-tier standard\|fast` | 全tokenへ仮定する速度。短文脈基準の参考シナリオ | 未指定（料金未算定） |
 
 入力がなければ `collect.py` の実行を案内します。壊れた JSONL 行は数だけ表示して、読めた行から集計します。
 
@@ -40,6 +41,7 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 | セクション | 項目の意味 |
 |---|---|
 | 冒頭 | `対象期間` はUTCに正規化した半開区間。`Root turn数` は Root 行数、`ユニークRoot thread/session数` は同じ会話内の複数turnを重複計上しない数、`全モデルturn数` は対象期間の Root/child を含む行数、`解析不能JSONL行` は無視した入力行数。 |
+| Service tierの証拠と算定範囲 | configured / observed_turn / requestedを分離。現行readerのrequest coverageは0、request数はUNKNOWN、短/長文脈は未分類。旧rowの単一tierもrequest証拠には使わない。 |
 | 初期ルート | Root の `initial_route` 分布。Root がなければその旨を表示。 |
 | 最初に観測したnamed spawn role | Root turnごとの`first_spawn_role`分布。未観測は`UNKNOWN`と表示する。Route別の集計や`initial_route`/`final_route`の推定には使わない。 |
 | 初期Route判定の出所 | `initial_route_source`別の件数と、旧Metricsでモデルから推定された`DIRECT_LUNA`件数を表示する。現行解析はモデル名やtool未使用だけではRouteを推定しない。spawnされたroleはRoot自身の初期意図の証明ではない。 |
@@ -55,13 +57,22 @@ offsetなしは実行PCのローカル時刻として解釈した後、UTCへ正
 | Context window 分布 / Compaction | 実効window値ごとのturn数と、`compacted` event数・発生時に観測できたcontextを表示する。旧rolloutにevent/snapshotがなければcountは0、contextは`UNKNOWN`であり、compaction非発生とは断定しない。 |
 | タスク単位token分布 | `(root_thread_id, root_turn_id)` ごとに Root と帰属 subagent の total token を合算し、平均・中央値・P90を表示。 |
 | Coordination / 待機 | `キャッシュ入力比率` は cached input / input、`wait/status系tool call` は call 数、`status-only token` はその token と全 total に占める割合。 |
-| API USD換算 / Codex追加クレジット換算 | それぞれの単価ファイルから別々に推計する。追加クレジット換算はプラン内利用枠の減少量ではない。 |
+| API USD換算 / Codex追加クレジット換算 | 明示--scenario-tier時だけ、それぞれの単価ファイルから別々の参考シナリオを計算する。追加クレジット換算はプラン内利用枠の減少量ではない。 |
 
 ## 重み付きコスト
 
-現在の `cost-weights.json` はAPI Standard短文脈のUSD単価、`codex-credit-rates.json` はCodex Standard速度の追加クレジット単価です。各ファイルに確認日と出典を付けています。観測された`service_tier`が`fast`なら両推計を2倍し、`standard`なら基準単価を使用します。欠損・未知のtierを持つ旧Metricsは算定対象外です。reasoning tokenはoutput tokenに含まれるため重複加算しません。以下は旧構成の相対weightの例であり、現在の設定値ではありません。
+現在の `cost-weights.json` はAPI Standard短文脈のUSD単価、`codex-credit-rates.json` はCodex Standard速度の追加クレジット単価です。各ファイルに確認日と出典を付けています。`turn_context.service_tier`は`observed_turn`の証拠だけなので、既定では料金を未算定にします。現在のconfigや旧rowのtierを実requestの速度とみなしません。
 
-API推計は短文脈の入力・キャッシュ済み入力・出力のみを扱います。APIのcache write単価、272K token超のリクエスト条件、その他の従量項目は再現しません。Codex追加クレジット推計はプラン内利用枠の消費量を表しません。Fastのプラン内利用枠係数2.5倍を追加クレジット推計に流用しません。
+参考比較には`--scenario-tier standard`または`--scenario-tier fast`を明示します。前者は基準単価、後者は2倍を全tokenに仮定します。途中変更も未知値も含めたtoken totalsへの仮定であり、観測速度の再現ではありません。modelの単価がない行はシナリオ算定から除外し、対象turn数を表示します。reasoning tokenはoutputに含まれるため重複加算しません。request単位のcoverageとは別です。
+
+```powershell
+python "$env:USERPROFILE\.codex\metrics\report.py" --scenario-tier standard
+python "$env:USERPROFILE\.codex\metrics\report.py" --scenario-tier fast
+```
+
+以下は旧構成の相対weightの例であり、現在の設定値ではありません。
+
+API参考シナリオは短文脈の入力・キャッシュ済み入力・出力のみを扱います。APIのcache write単価、長文脈のrequest条件、その他の従量項目は再現しません。累積input、context peak、compaction、window設定からrequestごとの短/長文脈料金を推定しません。Codex追加クレジットはAPIとは別の単価です。Pro等のプラン内利用枠消費は推定不可で、倍率を追加クレジットやAPIへ流用しません。
 
 ```json
 {
@@ -256,11 +267,10 @@ USER_RESULT   平均20  / 中央値0  / P90 0   / 最大967
 ```text
 uncached_input = input_tokens - cached_input_tokens
 
-weighted cost = (
+scenario reference = speed assumption × (
     uncached_input × input weight
   + cached_input_tokens × cached_input weight
   + output_tokens × output weight
-  + reasoning_tokens × reasoning weight
 ) / 1,000,000
 ```
 
@@ -277,17 +287,7 @@ weighted cost = (
 
 ### reasoning tokenの注意
 
-Backendや料金体系によっては、`reasoning_tokens`がoutputの内訳として扱われる場合があります。その場合、output weightとreasoning weightを両方加えると二重計上になります。
-
-比較目的なら、まず次のどちらかを明示します。
-
-```text
-reasoningをoutputとは別コストとして見る
-  → reasoning weightを設定
-
-reasoningをoutputの内訳として見る
-  → reasoning weightを0または未使用にする
-```
+現行計算はreasoning tokenをoutputの内訳として扱い、reasoning weightを加算しません。古い設定にreasoning keyが残っていても料金計算では使用しません。
 
 ### サンプル値の判断
 

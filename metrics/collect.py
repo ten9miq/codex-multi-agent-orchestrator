@@ -10,8 +10,8 @@ from pathlib import Path
 
 from rollout_reader import Turn, parse_rollout_turns, parse_ts
 
-# service_tierを既存rolloutから再解析して公開する。
-VERSION = 9
+# tier provenanceと時系列を元rolloutから再解析する。旧cacheをrequest証拠に昇格しない。
+VERSION = 10
 
 
 def attach_root_tasks(turns: list[Turn]) -> None:

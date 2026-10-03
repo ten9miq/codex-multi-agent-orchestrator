@@ -228,11 +228,11 @@ class ReportTests(unittest.TestCase):
         credits = report.load_weights(base / "codex-credit-rates.json")
         row = {"model": "gpt-6-sol", "service_tier": "standard", "input_tokens": 1_000_000,
                "cached_input_tokens": 0, "output_tokens": 1_000_000}
-        self.assertEqual(report.weighted_cost(row, api), 12)
-        self.assertEqual(report.weighted_cost(row, credits), 300)
+        self.assertEqual(report.weighted_cost(row, api, scenario_tier="standard"), 12)
+        self.assertEqual(report.weighted_cost(row, credits, scenario_tier="standard"), 300)
         row["model"] = "gpt-5.6-sol"
-        self.assertEqual(report.weighted_cost(row, api), 24)
-        self.assertEqual(report.weighted_cost(row, credits), 600)
+        self.assertEqual(report.weighted_cost(row, api, scenario_tier="standard"), 24)
+        self.assertEqual(report.weighted_cost(row, credits, scenario_tier="standard"), 600)
 
     def test_gpt_61_sol_speed_and_unknown_pricing(self) -> None:
         base = Path(__file__).parent
@@ -241,10 +241,10 @@ class ReportTests(unittest.TestCase):
         row = {"model": "gpt-6.1-sol", "service_tier": "priority",
                "input_tokens": 1_000_000, "cached_input_tokens": 500_000,
                "output_tokens": 1_000_000, "reasoning_tokens": 250_000}
-        self.assertEqual(report.weighted_cost(row, api), 22.1)
-        self.assertEqual(report.weighted_cost(row, credits), 552.5)
+        self.assertEqual(report.weighted_cost(row, api, scenario_tier="fast"), 22.1)
+        self.assertEqual(report.weighted_cost(row, credits, scenario_tier="fast"), 552.5)
         row["service_tier"] = "standard"
-        self.assertEqual(report.weighted_cost(row, api), 11.05)
+        self.assertEqual(report.weighted_cost(row, api, scenario_tier="standard"), 11.05)
         row.pop("service_tier")
         self.assertIsNone(report.weighted_cost(row, api))
         self.assertIsNone(report.weighted_cost(row, credits))
