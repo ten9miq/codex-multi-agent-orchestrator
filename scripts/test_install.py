@@ -10,8 +10,8 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 PROFILE = {
-    'scout': ('gpt-6-luna', 'medium', 'fast'),
-    'worker_luna': ('gpt-6-luna', 'high', 'fast'),
+    'scout': ('gpt-6-luna', 'medium', 'default'),
+    'worker_luna': ('gpt-6-luna', 'high', 'default'),
     'worker_sol': ('gpt-6.1-sol', 'high', 'default'),
     'controller_sol': ('gpt-6.1-sol', 'high', 'default'),
     'expert': ('gpt-6.1-sol', 'xhigh', 'default'),
@@ -25,8 +25,9 @@ class ConfigurationTests(unittest.TestCase):
     def test_root_and_independent_role_tiers(self):
         config = toml(REPO / 'config.example.toml')
         self.assertEqual((config['model'], config['model_reasoning_effort'], config['service_tier']),
-                         ('gpt-6-luna', 'medium', 'fast'))
+                         ('gpt-6-luna', 'medium', 'default'))
         self.assertTrue(config['features']['fast_mode'])
+        self.assertEqual({k for k, v in config['agents'].items() if isinstance(v, dict)}, set(PROFILE))
         for role, expected in PROFILE.items():
             with self.subTest(role=role):
                 agent = toml(REPO / config['agents'][role]['config_file'])
@@ -84,7 +85,7 @@ trust_level = "trusted"
         self.assertEqual(config['custom_top_level'], 'preserved')
         self.assertEqual(config['mcp_servers']['example']['url'], 'https://example.invalid/mcp')
         self.assertEqual(config['projects']['C:/test project']['trust_level'], 'trusted')
-        self.assertEqual(config['service_tier'], 'fast')
+        self.assertEqual(config['service_tier'], 'default')
         for role, expected in PROFILE.items():
             with self.subTest(role=role):
                 agent = toml(self.home / config['agents'][role]['config_file'])

@@ -85,7 +85,8 @@ class ContextObservabilityTests(unittest.TestCase):
             write_rollout(path, values)
             self.assertEqual(parse_session_summary(path).service_tier, "fast")
             self.assertEqual(parse_rollout_turns(path)[0].service_tier, "fast")
-            self.assertEqual(smoke.validate_profile(parse_session_summary(path), is_root=True, depth=0, child_count=0), [])
+            self.assertTrue(any("service_tier" in issue for issue in smoke.validate_profile(
+                parse_session_summary(path), is_root=True, depth=0, child_count=0)))
             values[1]["payload"].pop("service_tier")
             write_rollout(path, values)
             self.assertEqual(parse_rollout_turns(path)[0].service_tier, "UNKNOWN")
@@ -179,7 +180,9 @@ class ContextObservabilityTests(unittest.TestCase):
     def test_missing_context_is_nonfatal_even_with_expect(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             sessions = Path(temp)
-            write_rollout(sessions / "rollout-context.jsonl", rollout_values(include_context=False))
+            values = rollout_values(include_context=False)
+            values[1]["payload"]["service_tier"] = "default"
+            write_rollout(sessions / "rollout-context.jsonl", values)
             output = io.StringIO()
             argv = sys.argv
             try:

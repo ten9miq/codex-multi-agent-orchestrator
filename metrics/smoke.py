@@ -14,8 +14,8 @@ from typing import Iterable
 from rollout_reader import SessionSummary, parse_session_summary, parse_ts
 
 ROLE_PROFILES = {
-    "scout": ("gpt-6-luna", "medium", "v2", "fast", True),
-    "worker_luna": ("gpt-6-luna", "high", "v2", "fast", True),
+    "scout": ("gpt-6-luna", "medium", "v2", "standard", True),
+    "worker_luna": ("gpt-6-luna", "high", "v2", "standard", True),
     "worker_sol": ("gpt-6.1-sol", "high", "v2", "standard", True),
     "controller_sol": ("gpt-6.1-sol", "high", "v2", "standard", False),
     "expert": ("gpt-6.1-sol", "xhigh", "v2", "standard", True),
@@ -100,7 +100,7 @@ def validate_profile(
         issues.append("turn_context が見つかりません")
 
     if is_root:
-        expected = ("gpt-6-luna", "medium", "v2", "fast")
+        expected = ("gpt-6-luna", "medium", "v2", "standard")
         actual = (record.model, record.reasoning_effort, record.multi_agent_version, record.service_tier)
         labels = ("model", "effort", "multi_agent_version", "service_tier")
         for label, exp, got in zip(labels, expected, actual):

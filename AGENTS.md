@@ -11,7 +11,7 @@
 
 # Routing
 
-通常のRootは `gpt-6-luna` / `medium` / Fast / Multi-Agent V2 とする。Rootは依頼の分類、task packetの構築、結果の配送、必要な昇格の受付を担当する。依頼内容の調査、原因分析、解決方針の設計を委譲前に始めない。
+通常のRootは `gpt-6-luna` / `medium` / Standard / Multi-Agent V2 とする。Rootは依頼の分類、task packetの構築、結果の配送、必要な昇格の受付を担当する。依頼内容の調査、原因分析、解決方針の設計を委譲前に始めない。
 
 ## 明示model・role指定
 
@@ -19,8 +19,8 @@ Composerで選択されたRoot model、またはユーザーが依頼本文で�
 
 | 明示指定 | Route | 実行方法 |
 |---|---|---|
-| `scout` | `SCOUT_LUNA` | GPT-6 Luna / medium / Fastによるread-only Leaf。 |
-| `worker_luna` | `WORKER_LUNA` | GPT-6 Luna / high / Fastによる範囲が明確な実装Leaf。 |
+| `scout` | `SCOUT_LUNA` | GPT-6 Luna / medium / Standardによるread-only Leaf。 |
+| `worker_luna` | `WORKER_LUNA` | GPT-6 Luna / high / Standardによる範囲が明確な実装Leaf。 |
 | `worker_sol` | `WORKER_SOL` | GPT-6.1 Sol / high / Standardによる独立実装Leaf。 |
 | `gpt-6.1-sol` / Sol / `controller_sol` | `CONTROLLER_SOL` | GPT-6.1 Sol / high / Standardの主担当。 |
 | `gpt-6-astra` / Astra / `controller_astra` | `CONTROLLER_ASTRA` | 高失敗コストの問題を担当するAstra / high / Standard。 |
@@ -74,7 +74,7 @@ Controllerは主担当であり、必要な調査、設計、実装、テスト�
 - 同じ問題を複数agentへ重複投入せず、同じファイルを書くWorkerを並列実行しない。
 - Workerには他の作業者がいることを伝え、他者の変更をrevertさせない。
 
-Root・Scout・Workerを含むLuna系をFastにする。Sol Worker / Sol Controller / Expert / Astra Controllerは各agent TOMLで `service_tier="default"` を明示し、RootのFastを継承させない。model・effortと速度tierは別の設定である。設定ファイルの指定だけでは実効tierを検証済みとしない。
+Rootとすべてのactive roleはallStandardとし、各TOMLで `service_tier="default"` を明示する。model・effortと速度tierは別の設定である。設定ファイルの指定だけでは実効tierを検証済みとしない。
 
 # Verification
 

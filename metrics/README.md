@@ -50,7 +50,7 @@ python "$env:USERPROFILE\.codex\metrics\timeline.py" --minutes 30 --show-tokens
 - machine-readable な field 名は互換性のため英語のまま固定です。
 - `first_spawn_role` はRoot turnで最初に観測した既知のnamed spawn roleです。選択された`initial_route`とは独立に集計し、Routeの推定には使いません。
 - API USD換算とCodex追加クレジット換算は別の推計です。どちらもCodexのプラン内利用枠の減少量や請求額を表しません。料金表の日付・出典・速度条件は各JSONに記録します。
-- `service_tier=priority` は Fast、`default` は Standard として記録します。欠損・未知の値は `UNKNOWN` とし、Smoke Testでは未検証、料金推計では算定対象外です。RootとLuna childはFast、Sol/Astra childはStandardを期待します。FastのAPI・追加クレジット推計にはStandard単価の2倍を使います。プラン内利用枠の2.5倍係数を追加クレジットへ適用しません。
+- `service_tier=priority` は Fast、`default` は Standard として記録します。欠損・未知の値は `UNKNOWN` とし、Smoke Testでは未検証、料金推計では算定対象外です。Rootと全active childはStandardを期待します。FastのAPI・追加クレジット推計にはStandard単価の2倍を使います。プラン内利用枠の2.5倍係数を追加クレジットへ適用しません。
 - `rework_class` は連続Root turnの次発話を `NONE` / `USER_FOLLOWUP` / `MODEL_CORRECTION` / `UNKNOWN` に控えめに分類します。`possible_immediate_rework` は互換用の旧heuristicです。
 
 ## 詳細

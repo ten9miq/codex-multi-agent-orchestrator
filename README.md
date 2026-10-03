@@ -40,10 +40,10 @@ Root routing指示も`CODEX_HOME/AGENTS.md`へ適用する場合は、既存フ�
 
 ## 中心思想
 
-Rootは `gpt-6-luna / medium / Fast` の薄いRouterです。会話内で確実に完結する単純な処理だけをDirectで行い、調査・判断・ファイル操作・実装・検証が必要な通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
+Rootは `gpt-6-luna / medium / Standard` の薄いRouterです。会話内で確実に完結する単純な処理だけをDirectで行い、調査・判断・ファイル操作・実装・検証が必要な通常依頼は `gpt-6.1-sol / high / Standard` のControllerへ渡します。
 
 ```text
-Luna Medium / Fast Root
+Luna Medium / Standard Root
   ├─ DIRECT_LUNA       会話内だけで完結する単純処理
   ├─ CONTROLLER_SOL    調査・判断・実装・検証の通常主担当
   │    └─ 必要な場合だけScout / Worker / Expert
@@ -54,14 +54,14 @@ Controllerは通常、自分で完遂します。Workerを必ず挟む構成に�
 
 | 担当 | Model | Effort | 速度 |
 |---|---|---|---|
-| Root Router | GPT-6 Luna | medium | Fast |
-| Scout | GPT-6 Luna | medium | Fast |
-| Luna Worker | GPT-6 Luna | high | Fast |
+| Root Router | GPT-6 Luna | medium | Standard |
+| Scout | GPT-6 Luna | medium | Standard |
+| Luna Worker | GPT-6 Luna | high | Standard |
 | Sol Controller / Worker | GPT-6.1 Sol | high | Standard |
 | Expert | GPT-6.1 Sol | xhigh | Standard |
 | Astra Controller | GPT-6 Astra | high | Standard |
 
-Root・Scout・Workerを含むLuna系をFastにし、Sol系とAstraのroleは `service_tier = "default"` を明示します。速度を省略してRootのFastを継承しないようにします。`fast`はリクエストの`priority`に対応します。設定の根拠は[公式Subagentsガイド](https://learn.chatgpt.com/docs/agent-configuration/subagents)と[設定リファレンス](https://learn.chatgpt.com/docs/config-file/config-reference)です。実環境でのtierの適用は新規sessionで別途確認します。
+Rootとすべてのactive roleはallStandardとし、それぞれ `service_tier = "default"` を明示します。`fast`はリクエストの`priority`に対応します。設定の根拠は[公式Subagentsガイド](https://learn.chatgpt.com/docs/agent-configuration/subagents)と[設定リファレンス](https://learn.chatgpt.com/docs/config-file/config-reference)です。実環境でのtierの適用は新規sessionで別途確認します。
 
 ## Routing判定表
 
