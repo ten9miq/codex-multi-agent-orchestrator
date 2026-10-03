@@ -145,6 +145,114 @@
           ]
         }
       ]
+    },
+    {
+      "run_id": "synthetic-phase4-S4",
+      "case_id": "S4",
+      "policy": "phase4",
+      "actual_initial_route": "SCOUT_LUNA",
+      "actual_spawned_role": "scout",
+      "route_evidence": [
+        "synthetic:root-routing-event"
+      ],
+      "spawn_evidence": [
+        "synthetic:complete-tree"
+      ],
+      "root_tool_calls": 0,
+      "root_file_access": false,
+      "completion": {
+        "status": "COMPLETE",
+        "acceptance_met": true,
+        "evidence": [
+          "synthetic:artifact-check"
+        ],
+        "verification": "NOT_RUN",
+        "verification_evidence": []
+      },
+      "agent_tree_complete": true,
+      "task_wall_seconds": 3,
+      "timing_evidence": [
+        "synthetic:start/end"
+      ],
+      "agents": [
+        {
+          "session_id": "root",
+          "parent_session_id": null,
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 3,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        },
+        {
+          "session_id": "child",
+          "parent_session_id": "root",
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 2,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": "synthetic-phase5-W4",
+      "case_id": "W4",
+      "policy": "phase5",
+      "actual_initial_route": "WORKER_LUNA",
+      "actual_spawned_role": "worker_luna",
+      "route_evidence": [
+        "synthetic:root-routing-event"
+      ],
+      "spawn_evidence": [
+        "synthetic:complete-tree"
+      ],
+      "root_tool_calls": 0,
+      "root_file_access": false,
+      "completion": {
+        "status": "COMPLETE",
+        "acceptance_met": true,
+        "evidence": [
+          "synthetic:artifact-check"
+        ],
+        "verification": "PASS",
+        "verification_evidence": [
+          "synthetic:test-output"
+        ]
+      },
+      "agent_tree_complete": true,
+      "task_wall_seconds": 3,
+      "timing_evidence": [
+        "synthetic:start/end"
+      ],
+      "agents": [
+        {
+          "session_id": "root",
+          "parent_session_id": null,
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 3,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        },
+        {
+          "session_id": "child",
+          "parent_session_id": "root",
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 2,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        }
+      ]
     }
   ]
 }

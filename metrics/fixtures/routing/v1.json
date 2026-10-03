@@ -47,6 +47,9 @@
         ],
         "phase4": [
           "DIRECT_LUNA"
+        ],
+        "phase5": [
+          "DIRECT_LUNA"
         ]
       },
       "requires_verification": false
@@ -94,6 +97,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -143,6 +149,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": false
@@ -191,6 +200,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": false
@@ -238,6 +250,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -289,6 +304,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -336,6 +354,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -385,6 +406,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -432,6 +456,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -481,6 +508,9 @@
         ],
         "phase4": [
           "SCOUT_LUNA"
+        ],
+        "phase5": [
+          "SCOUT_LUNA"
         ]
       },
       "requires_verification": false
@@ -528,6 +558,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -577,6 +610,9 @@
         ],
         "phase4": [
           "SCOUT_LUNA"
+        ],
+        "phase5": [
+          "SCOUT_LUNA"
         ]
       },
       "requires_verification": false
@@ -624,6 +660,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -675,6 +714,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": false
@@ -723,6 +765,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "WORKER_LUNA"
         ]
       },
       "requires_verification": true
@@ -770,6 +815,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -819,6 +867,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -866,6 +917,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_ASTRA"
+        ],
+        "phase5": [
           "CONTROLLER_ASTRA"
         ]
       },
@@ -915,6 +969,9 @@
         ],
         "phase4": [
           "CONTROLLER_ASTRA"
+        ],
+        "phase5": [
+          "CONTROLLER_ASTRA"
         ]
       },
       "requires_verification": true
@@ -963,6 +1020,9 @@
         ],
         "phase4": [
           "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true
@@ -1010,6 +1070,9 @@
           "CONTROLLER_SOL"
         ],
         "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
           "CONTROLLER_SOL"
         ]
       },
@@ -1062,6 +1125,10 @@
         "phase4": [
           "CONTROLLER_SOL",
           "CONTROLLER_ASTRA"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL",
+          "CONTROLLER_ASTRA"
         ]
       },
       "requires_verification": true
@@ -1110,6 +1177,164 @@
         ],
         "phase4": [
           "CONTROLLER_ASTRA"
+        ],
+        "phase5": [
+          "CONTROLLER_ASTRA"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W8",
+      "prompt": "docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W2",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。"
+        },
+        "verification": {
+          "value": "existing_deterministic",
+          "evidence": "Request: docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: docs/a.txtとdocs/b.txtの各1行目だけをtehからtheへ完全一致置換。通常文書の局所誤字で可逆。既存python tests/check_titles.pyで両文字列と許可差分だけを決定的に確認。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "WORKER_LUNA"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W9",
+      "prompt": "privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。"
+        },
+        "verification": {
+          "value": "existing_deterministic",
+          "evidence": "Request: privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。"
+        },
+        "consequence": {
+          "value": "protected",
+          "evidence": "Request: privacy/retention.jsonのdaysを30から365へ完全一致変更。既存schema testはある。個人情報保持policyを変更する。"
+        },
+        "unknowns": []
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
+        ]
+      },
+      "requires_verification": true
+    },
+    {
+      "id": "W10",
+      "prompt": "docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。",
+      "routing_mode": "ROOT_AUTO",
+      "pair": "W4",
+      "feature_card": {
+        "scope": {
+          "value": "localized_change",
+          "evidence": "Request: docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。"
+        },
+        "method": {
+          "value": "exact_transform",
+          "evidence": "Request: docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。"
+        },
+        "context": {
+          "value": "specified_sources",
+          "evidence": "Request: docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。"
+        },
+        "reasoning": {
+          "value": "none",
+          "evidence": "Request: docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。"
+        },
+        "verification": {
+          "value": "unknown",
+          "evidence": "Request: docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。"
+        },
+        "consequence": {
+          "value": "reversible_local",
+          "evidence": "Request: docs/title.txtの誤字修正。既存のgrepが文字列存在だけ確認するが、指定範囲以外の変更がないという受入条件を確認できない。"
+        },
+        "unknowns": [
+          "既存checkが受入条件全体をcoverしていない"
+        ]
+      },
+      "acceptable_routes": {
+        "current": [
+          "CONTROLLER_SOL"
+        ],
+        "phase3": [
+          "CONTROLLER_SOL"
+        ],
+        "always_sol": [
+          "CONTROLLER_SOL"
+        ],
+        "phase4": [
+          "CONTROLLER_SOL"
+        ],
+        "phase5": [
+          "CONTROLLER_SOL"
         ]
       },
       "requires_verification": true

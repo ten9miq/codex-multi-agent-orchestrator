@@ -44,7 +44,7 @@ python metrics/routing_eval.py --observations /path/to/reviewed-observations.jso
 
 各runには以下を記録する。
 
-- `run_id`、`case_id`、`policy` (`current / phase3 / phase4 / always_sol`)
+- `run_id`、`case_id`、`policy` (`current / phase3 / phase4 / phase5 / always_sol`)
 - 実際の `actual_initial_route`、`route_evidence` (Rootの決定が確認できる記録参照)
 - 実際の `actual_spawned_role` と `spawn_evidence` (spawn記録参照)。Directはroleを明示的にnullとし、未spawnを確認できる記録を付ける。同じmodelのWorker/Controllerをmodel名から推定しない。
 - `root_tool_calls`、`root_file_access`。Directは0/falseでなければ契約違反。
@@ -73,3 +73,15 @@ phase4はS4 (指定JSON field) とS6 (指定logの完全一致行) をScoutと�
 Scoutがsourceの矛盾や意味判断の必要性を発見した場合はESCALATE_SOL。権限/network不足はBLOCKED/recoveryで、能力の昇格とは別。ROOT_AUTOの狭い条件はCONTROLLER_LEAF/EXPLICITに機械的に適用しない。`scout` の出力statusを静的に検査するテストも実際のmodel遵守を証明しない。
 
 phase4ではbounded Scoutの追加とともに、低consequenceでも真に難解な制約・推論を伴うA5をAstra許容へ明示的に拡張する。単なる長さ・作業量・自称hardでは足りず、feature evidenceが必要。通常designのA2はSolのまま。current/phase3の比較基準は変更しない。
+
+## Phase 5: bounded Luna Workerのpositive/negative対
+
+phase5ではW4 (完全指定の通常文書置換+既存決定的check)、W8 (完全指定の2文書への局所置換+既存check) がLuna Worker。W1のcheck未指定、W2の1ファイルbug/意味設計、W5/W9のauth/privacy変更、W6の新規check設計、W10の受入をcoverしないcheckはSol。W7の難解かつ高影響の整合性設計はAstra。数やdiffの短さでは振り分けない。
+
+whole-task境界には変更だけでなく検証も含む。前提不一致や決定的check失敗は証拠・diff・output・未実行check・現在状態を添えたESCALATE_SOLで、既存成果から継続する。rollback/全面redoを済ませたと主張しない。許可/network環境の不足はBLOCKED/recovery。指定scopeと受入checkが成功したLuna WorkerをSolで再reviewする儀式は追加しない。
+
+最終候補 `phase5` と変更前 `current`、比較用 `always_sol` を同じfixture/versionに対して比較する。観測なしの期待値一覧は改善の実測値ではない。synthetic例は次で確認できるが、live比較は別途承認された実行と証拠reviewが必要。
+
+```shell
+python metrics/routing_eval.py --observations metrics/fixtures/routing/synthetic-observations-v1.json
+```

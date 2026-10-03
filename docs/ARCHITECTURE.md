@@ -2,13 +2,14 @@
 
 ## 目的と責務
 
-RootはGPT-6 Luna / medium / Standardで依頼を分類し、task packetを渡し、主担当の回答を配送します。会話内の単純処理だけをDirectにし、指定source内の直接表現された事実を指定検索・受入条件で取得するだけならScout、それ以外の通常依頼はGPT-6.1 Sol / high / Standardへ渡します。Lunaが委譲前に調査したり、結果の専門的判断をやり直したりする構成にはしません。
+RootはGPT-6 Luna / medium / Standardで依頼を分類し、task packetを渡し、主担当の回答を配送します。会話内の単純処理だけをDirectにし、指定source内の直接表現された事実を指定検索・受入条件で取得するだけならScout、完全指定の低risk・可逆な局所変換を既存の決定的checkまで完遂できるならLuna Worker、それ以外の通常依頼はGPT-6.1 Sol / high / Standardへ渡します。Lunaが委譲前に調査したり、結果の専門的判断をやり直したりする構成にはしません。
 
 ```mermaid
 flowchart TD
     U[User] --> R["Luna Medium / Standard Root"]
     R -->|"会話内だけで完結"| D[DIRECT_LUNA]
     R -->|"完全指定の事実取得"| S
+    R -->|"bounded変換と既存check"| LW["Luna High Worker"]
     R -->|"調査・判断・変更・検証"| C["6.1 Sol High / Standard Controller"]
     R -->|"必要な昇格"| A["Astra High / Standard Controller"]
     C -->|"必要な場合だけ"| S["Luna Medium / Standard Scout"]
@@ -19,7 +20,7 @@ flowchart TD
     A --> E
 ```
 
-Controllerは必要な調査、設計、実装、テスト、最終回答まで通常は自身で完遂します。毎回Leafを起動しません。独立性・明確な所有範囲・待ち時間削減の利益がある場合だけ、通常1～2 Leafへ委譲します。Rootの自動初期RouteはDirect / Scout / Sol Controller / Astra Controllerです。Workerの直接起動は明示role指定に限ります。明示modelとして適合するRootが動作中なら同役割を重複起動しません。
+Controllerは必要な調査、設計、実装、テスト、最終回答まで通常は自身で完遂します。毎回Leafを起動しません。独立性・明確な所有範囲・待ち時間削減の利益がある場合だけ、通常1～2 Leafへ委譲します。Rootの自動初期RouteはDirect / Scout / Luna Worker / Sol Controller / Astra Controllerです。Sol Workerの直接起動は明示role指定に限ります。明示modelとして適合するRootが動作中なら同役割を重複起動しません。
 
 ## 設定と速度
 
@@ -58,3 +59,9 @@ ROOT_AUTOでScoutへ渡せるのは、依頼全体が指定sourceに直接記載
 Scoutは矛盾や推論の必要性を発見したらESCALATE_SOLを証拠つきで返します。権限/network障害はBLOCKEDまたは承認済みrecoveryであり、model昇格の理由にしません。positive/negative fixtureはS4/S5とS6/S7/S8。offline PASSはlive routing成功の証明ではありません。
 
 phase4では真に難解な制約・推論も、重大な外部影響がないことだけを理由にSolへ固定しません。Astraの対象拡張はA5/A2の対で明示的に評価し、current/phase3は旧基準を保持します。
+
+## Bounded Luna Worker (phase 5)
+
+成果物全体が完全指定の低risk・可逆・局所変換と既存の決定的checkで完結する場合だけ、ROOT_AUTOでLuna Workerを選べます。1ファイルという数では判定せず、意味判断・方式設計・protected/sensitive変更・新規check設計を除外します。既存checkが受入条件全体をcoverしない場合もSol Highです。Controllerが切り出した通常実装や明示roleの契約は維持します。
+
+前提矛盾やcheck失敗は証拠、diff、test output、未実行check、現在状態を添えてSolへ返します。変更済み成果を保存したまま継続できるようにし、rollback済みや最初からredoが必要と推測しません。権限/network障害はBLOCKED/recoveryです。成功したbounded Luna Workerはmandatory Sol rereviewなしに完了します。最終5-routeに自動WorkerSolは含めません。
