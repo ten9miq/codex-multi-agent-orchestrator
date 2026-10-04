@@ -43,3 +43,9 @@ V2のmax_depthだけをhard enforcementとみなさず、role指示・packet・S
 ## 観測
 
 Source of Truthは`%USERPROFILE%/.codex/sessions/**/rollout-*.jsonl`です。Metricsは受動解析に限定します。API換算、追加クレジット換算、実際のプラン内利用枠変化を区別し、親子合計の消費・完遂・手戻り・時間で評価します。実効tierが不明な記録をStandard扱いして費用を断定しません。
+
+## Bounded routingの評価基盤 (phase 3)
+
+現在の自動初期Route 3種類を変えず、6軸のtask feature card (`scope / method / context / reasoning / verification / consequence`) と各軸のevidence、unknownsを導入します。自己申告confidenceを使わず、依頼と既知情報から一度だけ分類します。調査してから安価routeに振るための準備作業はRootで行いません。
+
+`ROOT_AUTO` と `CONTROLLER_LEAF` と `EXPLICIT` は別のpacket適用範囲です。明示指定と既存のController配下Leafの能力は維持します。offline evaluatorは固定fixtureの期待を決定的に再現する参照実装で、自然言語routerのhard enforcementではありません。synthetic fixtureのPASS、配線Smoke、手動ケース表の存在は実際の自動routingや費用改善の証明になりません。手順は[Routing評価](../metrics/docs/ROUTING-EVAL.md)を参照してください。

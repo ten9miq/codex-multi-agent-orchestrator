@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "fixture_version": "bounded-routing-v1",
+  "data_kind": "synthetic",
+  "runs": [
+    {
+      "run_id": "synthetic-current",
+      "case_id": "D1",
+      "policy": "current",
+      "actual_initial_route": "DIRECT_LUNA",
+      "actual_spawned_role": null,
+      "route_evidence": [
+        "synthetic:root-routing-event"
+      ],
+      "spawn_evidence": [
+        "synthetic:complete-tree"
+      ],
+      "root_tool_calls": 0,
+      "root_file_access": false,
+      "completion": {
+        "status": "COMPLETE",
+        "acceptance_met": true,
+        "evidence": [
+          "synthetic:artifact-check"
+        ],
+        "verification": "PASS",
+        "verification_evidence": [
+          "synthetic:test-output"
+        ]
+      },
+      "agent_tree_complete": true,
+      "task_wall_seconds": 3,
+      "timing_evidence": [
+        "synthetic:start/end"
+      ],
+      "agents": [
+        {
+          "session_id": "root",
+          "parent_session_id": null,
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 3,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": "synthetic-phase3",
+      "case_id": "D1",
+      "policy": "phase3",
+      "actual_initial_route": "DIRECT_LUNA",
+      "actual_spawned_role": null,
+      "route_evidence": [
+        "synthetic:root-routing-event"
+      ],
+      "spawn_evidence": [
+        "synthetic:complete-tree"
+      ],
+      "root_tool_calls": 0,
+      "root_file_access": false,
+      "completion": {
+        "status": "COMPLETE",
+        "acceptance_met": true,
+        "evidence": [
+          "synthetic:artifact-check"
+        ],
+        "verification": "PASS",
+        "verification_evidence": [
+          "synthetic:test-output"
+        ]
+      },
+      "agent_tree_complete": true,
+      "task_wall_seconds": 3,
+      "timing_evidence": [
+        "synthetic:start/end"
+      ],
+      "agents": [
+        {
+          "session_id": "root",
+          "parent_session_id": null,
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 3,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": "synthetic-always_sol",
+      "case_id": "D1",
+      "policy": "always_sol",
+      "actual_initial_route": "CONTROLLER_SOL",
+      "actual_spawned_role": "controller_sol",
+      "route_evidence": [
+        "synthetic:root-routing-event"
+      ],
+      "spawn_evidence": [
+        "synthetic:complete-tree"
+      ],
+      "root_tool_calls": 0,
+      "root_file_access": false,
+      "completion": {
+        "status": "COMPLETE",
+        "acceptance_met": true,
+        "evidence": [
+          "synthetic:artifact-check"
+        ],
+        "verification": "PASS",
+        "verification_evidence": [
+          "synthetic:test-output"
+        ]
+      },
+      "agent_tree_complete": true,
+      "task_wall_seconds": 3,
+      "timing_evidence": [
+        "synthetic:start/end"
+      ],
+      "agents": [
+        {
+          "session_id": "root",
+          "parent_session_id": null,
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 3,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        },
+        {
+          "session_id": "child",
+          "parent_session_id": "root",
+          "input_tokens": 10,
+          "cached_input_tokens": 2,
+          "output_tokens": 4,
+          "elapsed_seconds": 2,
+          "evidence": [
+            "synthetic:usage-event"
+          ]
+        }
+      ]
+    }
+  ]
+}

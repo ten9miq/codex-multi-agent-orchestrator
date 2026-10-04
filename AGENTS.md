@@ -29,7 +29,24 @@ Composerで選択されたRoot model、またはユーザーが依頼本文で�
 
 ## 自動routing
 
-実作業前に一度だけ、最終成果物、Directの除外条件、選択Routeを内部的に短く確認する。分類以外の内容判断、未知の事実の探索、複数証拠の照合、変更、検証が必要なら `CONTROLLER_SOL` へ渡す。必要性を判断できない場合もSolへ渡す。
+この節は `Routing mode: ROOT_AUTO` の初期Routeだけに適用する。Controllerが定義した部分作業は `CONTROLLER_LEAF`、ユーザーの明示model/role指定は `EXPLICIT` としてpacketに記録する。ROOT_AUTOの安価route条件をController配下や明示指定のLeafへ一律に課さない。各roleのread-only、所有範囲、権限、再委譲禁止はmodeによらず維持する。modeを省略したpacketからROOT_AUTOの安価route適格性を推定しない。
+
+### 固定task feature card
+
+実作業前に一度だけ、依頼本文と既にある証拠から以下の6軸を短く記録する。分類のための追加探索、tool call、原因分析は始めない。各軸は `value` と `evidence` (依頼箇所・既知の出典) を持ち、未確定事項は `unknowns` に残す。自己申告confidence、単なる「簡単」「1ファイル」、小さいtoken予想を根拠にしない。欠落・矛盾を推測で埋めず、適格性が不明ならSolへ渡す。
+
+| 軸 | 固定value | 記録する事実 |
+|---|---|---|
+| scope | conversation / bounded_retrieval / localized_change / multicomponent / unknown | 最終成果物の全範囲と対象 |
+| method | exact_text / direct_retrieval / exact_transform / semantic / investigate / unknown | 指定された検索・変換手順か、方法選択が必要か |
+| context | conversation / specified_sources / unbounded / unknown | 必要な出典・pathが確定しているか |
+| reasoning | none / lookup / design / diagnosis / hard / unknown | 解釈・推論・設計・診断の要否 |
+| verification | not_needed / readback / existing_deterministic / new_check / unknown | 受入条件と既存の確認手段 |
+| consequence | low / reversible_local / protected / high_impact / unknown | 可逆性、保護領域、失敗影響 |
+
+カードは判断根拠の要約であり、内部推論の逐語記録ではない。`metrics/routing_eval.py` のdeterministic expectationはversioned fixtureを検査するoffline参照実装だけで、runtime dispatcher、model呼出し、強制routing、安全境界のhard enforcementを提供しない。自然言語policyの遵守は別途観測が必要。
+
+現段階では自動初期RouteをDirect / Sol Controller / Astra Controllerの3つに維持する。最終成果物、Directの除外条件、選択Routeを内部的に短く確認する。分類以外の内容判断、未知の事実の探索、複数証拠の照合、変更、検証が必要なら `CONTROLLER_SOL` へ渡す。必要性を判断できない場合もSolへ渡す。
 
 | Route | 選択条件 | 境界 |
 |---|---|---|
@@ -43,13 +60,15 @@ Composerで選択されたRoot model、またはユーザーが依頼本文で�
 
 RootはSolの `USER_RESULT` の結論、根拠、検証範囲、残課題を保持して配送する。protocolの整合と依頼に対する明白な不足だけを確認し、専門的な再分析、再探索、独自の結論変更を行わない。不足があれば主担当へ具体的に返す。解決方法をRootで再設計しない。
 
-**実行中の昇格:** Sol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` をRootへ返す。Workerの `ESCALATE_SOL` は、Controller配下なら主担当Controllerが引き取り、Rootから明示起動されたWorkerならRootがSol Controllerへ渡す。同じモデルのWorkerを通常受付にしてからControllerへ渡し直す方式にしない。情報・権限・外部依存の不足は推測で埋めず `BLOCKED` とする。テスト失敗、未達の受入条件、未解消の根本原因を `COMPLETE` にしない。
+**実行中の昇格:** Sol ControllerはAstraが必要な条件だけ `ESCALATE_ASTRA` をRootへ返す。Workerの `ESCALATE_SOL` は、Controller配下なら主担当Controllerが引き取り、Rootから明示起動されたWorkerならRootがSol Controllerへ渡す。同じモデルのWorkerを通常受付にしてからControllerへ渡し直す方式にしない。情報・権限・networkを含む外部依存の不足は推測で埋めず `BLOCKED` とする。権限拒否やnetwork failureはモデル能力不足ではなく、承認済みのrecoveryまたは追加情報の取得を扱う。上位モデルへの切替で制限を回避しない。テスト失敗、未達の受入条件、未解消の根本原因を `COMPLETE` にしない。
 
 # Delegation
 
 agentを起動する場合は `agent_type` にnamed roleを明示する。generic spawnを通常のrouting手段にしない。named agentには原則 `fork_turns="none"` を使う。直近の会話が不可欠な場合だけ小さい `fork_turns=N` を使い、親の推測を事実として渡さないself-contained packetを作る。
 
 ```text
+Routing mode: ROOT_AUTO | CONTROLLER_LEAF | EXPLICIT
+Feature card: ROOT_AUTOは6軸のvalue/evidenceとunknowns
 Objective: 元の目的と、このagentが達成する部分
 Known facts / evidence: 確認済みの事実、対象path、観測結果
 Unknowns: 未確認事項と、仮定を置いてよい範囲

@@ -14,9 +14,11 @@ Leaf-firstは手段であって必須の儀式ではない。広範なrepository
 - `worker_sol`: 難しいが境界の明確な中核実装。
 - `expert`: Sol XHighによる難しい局所問題、correctness/security、独立レビュー。
 
-別Controllerを起動しない。Astraが必要なら自分で起動せず `ESCALATE_ASTRA` をRootへ返す。Leafには原則 `fork_turns="none"` で、Objective、Known facts / evidence、Unknowns、Scope、Allowed、Forbidden、Acceptance criteria、Verification、Authorization、Escalationを含むself-contained task packetを渡す。同じ問題を複数Leafへ重複投入しない。通常は1～2体で十分かを優先する。
+別Controllerを起動しない。Astraが必要なら自分で起動せず `ESCALATE_ASTRA` をRootへ返す。Leafには原則 `fork_turns="none"` で、Routing mode: CONTROLLER_LEAF、Objective、Known facts / evidence、Unknowns、Scope、Allowed、Forbidden、Acceptance criteria、Verification、Authorization、Escalationを含むself-contained task packetを渡す。同じ問題を複数Leafへ重複投入しない。通常は1～2体で十分かを優先する。
 
 `ESCALATE_ASTRA` は、核心が難解なarchitecture、concurrency/distributed state、security-sensitive/high-risk判断、破壊的migration、または十分に調査してもSolで重要な不確実性が残る場合に限る。単にタスクが長いことを理由に昇格しない。
+
+ROOT_AUTOの安価route適格条件は初期受付の境界であり、Controllerがscopeと受入条件を定めて切り出すCONTROLLER_LEAFの能力範囲を狭めない。権限拒否やnetwork failureはBLOCKEDまたは承認済みrecoveryで扱い、モデル昇格による解決を装わない。
 
 検証は変更のriskに合わせて行い、成功後の不要な再レビューを避ける。
 
