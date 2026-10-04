@@ -1,6 +1,6 @@
 # Smoke Test と配線検証
 
-設定導入・変更後は Codex を完全終了して再起動し、新規 session で実施します。画面表示ではなく rollout JSONL の**実効値**を確認します。
+設定導入・変更後は Codex を完全終了して再起動し、新規 session で実施します。rollout JSONL の**turn_context設定観測値**を確認します。設定ファイル自体や各requestへのtier適用を検証するものではありません。
 
 ```powershell
 $SmokeStart = Get-Date
@@ -120,8 +120,9 @@ rollout数    : 3
 └─ [OK] controller_sol | gpt-6.1-sol / high / v2 / standard
    └─ [OK] scout | gpt-6-luna / medium / v2 / standard
 
-RESULT: PASS
-実効model / effort / service_tier / Multi-Agent runtime / role配線は期待値と一致しています。
+REQUEST_TIER: UNVERIFIED
+RESULT: PASS (TURN_CONTEXT_PROFILE_ONLY)
+観測したturn設定とrole配線が期待値と一致しています。request tierは未検証です。
 ```
 
 ### Astra Controller
@@ -158,14 +159,15 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" `
 [OK] ROOT | gpt-6-luna / medium / v2 / standard
 └─ [OK] controller_astra | gpt-6-astra / high / v2 / standard
 
-RESULT: PASS
+REQUEST_TIER: UNVERIFIED
+RESULT: PASS (TURN_CONTEXT_PROFILE_ONLY)
 ```
 
 追加 agent は期待していない token の原因として扱います。
 
 ## 配線Smoke Testと自動Routing Testを混同しない
 
-上のSmoke Testは、promptで**指定した**role、model、effort、service_tier、treeが実効化されるかを`smoke.py --expect`で確認する配線検証である。合成fixtureでのunit testは解析ロジックの確認であり、実際のchild速度override成功の証明ではない。実効値の確認には設定適用後の新しいrolloutが必要。Rootが依頼内容から適切なrouteを選べること、またはtoken効率を証明するテストではない。
+上のSmoke Testは、promptで**指定した**role、model、effort、turn_contextのservice_tier、treeを`smoke.py --expect`で確認する配線検証です。合成fixtureのPASSも実rolloutのPASSも、childの実requestで速度overrideが成功した証明にはなりません。新しいrolloutでもturn_contextは`observed_turn`に留まり、request payload/traceがなければ`REQUEST_TIER: UNVERIFIED`です。Rootの自動routingやtoken効率も証明しません。
 
 自動Routing Testは、agent名を指定せず、固定した自然言語ケースを新規sessionで一件ずつ実行する運用評価である。開始時刻をケースごとに記録し、`collect.py`と`report.py`で実際の`initial_route`、完了、初回完遂、手戻り、token、subagent数を確認する。現在のMetricsは受動解析であり、期待routeとの突合や設定の自動変更は行わない。
 
@@ -217,8 +219,12 @@ Guardian / Review / Compact / Auto Review 等の内部補助 session（例: `cod
 
 | exit code | 意味 |
 |---:|---|
-| `0` | PASS |
+| `0` | TURN_CONTEXT_PROFILE_ONLY PASS。request tierはUNVERIFIED |
 | `1` | rollout は読めたが設定・配線に警告あり |
 | `2` | sessions/rollout がないなど、テスト自体を実行できない |
 
-`turn_context` または `service_tier` がない警告は model / effort / 速度 / V1/V2 を実ログから確認できない状態であり、PASS にはなりません。未知のtierも同様です。
+`turn_context`または`service_tier`がない、未知のtier、異なるtierの混在、既知値と未知値の混在は、観測profileのPASSにはなりません。最後に期待値が現れただけでは以前の未知値・変更を消しません。全active roleの期待tierは`standard`です。
+
+JSONの既存`pass`は`observed_config_pass`の互換aliasで、`pass_scope=observed_turn_configuration_and_wiring`に限定されます。`request_tier_status=UNVERIFIED`は成功時にも別に表示します。`configured_service_tier`は設定ファイルを読まないためUNKNOWNです。現在のconfigが期待値だからといって、過去の実行がそのtierだったと判定しません。
+
+Session summaryはtier観測のないturn数を`tier_unobserved_turn_count`として記録します。別turnの既知観測を、そのturnへ持ち越してsession全体をPASSにしません。

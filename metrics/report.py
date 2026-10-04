@@ -170,17 +170,21 @@ def rate_unit(path: Path) -> str | None:
         return None
 
 
-def weighted_cost(row: dict[str, Any], weights: dict[str, dict[str, float]]) -> float | None:
+def weighted_cost(
+    row: dict[str, Any], weights: dict[str, dict[str, float]],
+    *, scenario_tier: str | None = None,
+) -> float | None:
+    """明示された速度仮定での短文脈基準値。観測tierから料金を確定しない。"""
     w = weights.get(row.get("model", ""))
     if not isinstance(w, dict):
         return None
-    tier = row.get("service_tier")
+    tier = scenario_tier
     if tier in {"priority", "fast"}:
         speed_multiplier = 2.0
     elif tier in {"default", "standard"}:
         speed_multiplier = 1.0
     else:
-        # 旧rolloutの欠損やautoは実効速度を証明できない。
+        # turn_context、旧Metrics、現在の設定はrequest tierの証明にならない。
         return None
 
     inp = int(row.get("input_tokens", 0) or 0)
@@ -285,6 +289,10 @@ def build_parser() -> argparse.ArgumentParser:
         default=default_metrics / "codex-credit-rates.json",
         help="Codex Standard速度の追加クレジット参考単価JSON",
     )
+    parser.add_argument(
+        "--scenario-tier", choices=("standard", "fast"), default=None,
+        help="全tokenへ仮定する速度。短文脈基準の参考シナリオのみ。既定は料金未算定。",
+    )
     return parser
 
 
@@ -341,6 +349,26 @@ def main() -> int:
         print("\n対象期間にMetricsがありません。")
         return 0
 
+    print("\n■ Service tierの証拠と算定範囲")
+    tier_counts = Counter(
+        str(row.get("observed_service_tier") or "UNKNOWN")
+        if row.get("service_tier_evidence") == "observed_turn" else "UNKNOWN"
+        for row in rows
+    )
+    for tier, count in tier_counts.most_common():
+        print(f"  observed_turn {tier:<14} {count:>10,}")
+    print("  configured tier             UNKNOWN（収集時の現在設定を過去へ適用しません）")
+    print("  requested tier              UNVERIFIED")
+    print(f"  request単位の算定coverage    0/{len(rows):,} turns; request数 UNKNOWN")
+    print("  ※ turn_contextはrequest traceではありません。短/長文脈の料金分類は未確認です。")
+    print("  ※ 旧service_tierだけの行・欠損・mixedもrequest tierの根拠にはしません。")
+    if args.scenario_tier:
+        print(f"  参考シナリオ                 {args.scenario_tier}を全tokenに仮定（短文脈基準）")
+        print("  ※ 観測された速度の再現ではありません。cache write・長文脈・その他料金を含みません。")
+    else:
+        print("  料金推計                     未算定（参考比較には --scenario-tier を明示）")
+    print("  Pro等のプラン内利用枠消費    推定不可")
+
     task_groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         root_thread = row.get("root_thread_id") or (row.get("thread_id") if row.get("is_root") else None)
@@ -352,8 +380,8 @@ def main() -> int:
     for root in roots:
         key = (str(root.get("root_thread_id") or root.get("thread_id") or ""), str(root.get("root_turn_id") or root.get("turn_id") or ""))
         group = task_groups.get(key, [root])
-        costs = [weighted_cost(item, weights) for item in group]
-        credits = [weighted_cost(item, credit_rates) for item in group]
+        costs = [weighted_cost(item, weights, scenario_tier=args.scenario_tier) for item in group]
+        credits = [weighted_cost(item, credit_rates, scenario_tier=args.scenario_tier) for item in group]
         task_summaries.append({
             "root": root,
             "total_tokens": sum(int(item.get("total_tokens", 0) or 0) for item in group),
@@ -663,7 +691,7 @@ def main() -> int:
         auto_reasoning = sum(int(row.get("reasoning_tokens", 0) or 0) for row in auto_review_rows)
         auto_total = sum(int(row.get("total_tokens", 0) or 0) for row in auto_review_rows)
         all_total = sum(int(row.get("total_tokens", 0) or 0) for row in rows)
-        auto_costs = [weighted_cost(row, weights) for row in auto_review_rows]
+        auto_costs = [weighted_cost(row, weights, scenario_tier=args.scenario_tier) for row in auto_review_rows]
         auto_costs = [cost for cost in auto_costs if cost is not None]
         print(f"  turn                         {fmt_i(len(auto_review_rows)):>12}")
         print(f"  total token                  {fmt_i(auto_total):>12}")
@@ -800,15 +828,15 @@ def main() -> int:
     )
 
     if weights:
-        costs = [weighted_cost(row, weights) for row in rows]
+        costs = [weighted_cost(row, weights, scenario_tier=args.scenario_tier) for row in rows]
         costs = [cost for cost in costs if cost is not None]
         if costs:
-            print(f"\n■ {api_cost_label}" + ("（実効速度を反映、Standard短文脈単価が基準）" if api_cost_label.startswith("API") else ""))
-            print(f"  既知モデルturnの小計          {sum(costs):>12.4f}")
+            print(f"\n■ {api_cost_label}" + ("（速度を仮定した短文脈基準シナリオ）" if api_cost_label.startswith("API") else ""))
+            print(f"  参考シナリオ小計          {sum(costs):>12.4f}")
             print(f"  算定対象turn                {len(costs):>12,}/{len(rows):,}")
             task_costs: list[float] = []
             for group in task_groups.values():
-                values = [weighted_cost(row, weights) for row in group]
+                values = [weighted_cost(row, weights, scenario_tier=args.scenario_tier) for row in group]
                 values = [value for value in values if value is not None]
                 if values and len(values) == len(group):
                     task_costs.append(sum(values))
@@ -819,22 +847,22 @@ def main() -> int:
             print("  ※ 設定した単価による参考値です。実際のAPI請求額やCodex利用枠の消費ではありません。")
         else:
             print(f"\n■ {api_cost_label}")
-            print("  算定できるmodel・service_tier既知のturnがありません。")
+            print("  料金は未算定です。request tier未検証、または算定可能なmodelがありません。")
     else:
         print(f"\n■ {api_cost_label}")
         print("  無効です。cost-weights.json にモデル別weightを設定すると表示されます。")
 
-    print("\n■ Codex追加クレジット換算の推計（実効速度を反映）")
-    credit_values = [weighted_cost(row, credit_rates) for row in rows]
+    print("\n■ Codex追加クレジット換算の推計（速度を仮定した参考シナリオ）")
+    credit_values = [weighted_cost(row, credit_rates, scenario_tier=args.scenario_tier) for row in rows]
     known_credits = [value for value in credit_values if value is not None]
     if known_credits:
-        print(f"  既知モデルturnの小計          {sum(known_credits):>12.4f}")
+        print(f"  参考シナリオ小計          {sum(known_credits):>12.4f}")
         print(f"  算定対象turn                {len(known_credits):>12,}/{len(rows):,}")
         print(f"  rate設定                    {args.credit_rates}")
         print(f"  単価確認日                   {rate_as_of(args.credit_rates)}")
         print("  ※ 追加クレジット単価による参考値です。プラン内利用枠の減少量や請求額ではありません。")
     else:
-        print("  算定できるmodel・service_tier既知のturnがありません。")
+        print("  料金は未算定です。request tier未検証、または算定可能なmodelがありません。")
 
     return 0
 

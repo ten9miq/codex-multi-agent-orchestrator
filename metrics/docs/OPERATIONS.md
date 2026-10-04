@@ -42,7 +42,7 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" --minutes 30 --table
 
 ### `turn_context` がない
 
-`! turn_context が見つかりません` または `service_tier` の不一致は model / effort / 速度 / V1/V2 を実ログから確認できない状態です。`smoke.py` は警告し、PASS にしません。
+`! turn_context が見つかりません`または`service_tier`の不一致・未知値・混在は、観測profileを確認できない状態です。`smoke.py`は警告し、profileのPASSにしません。成功してもrequest tierはUNVERIFIEDです。現在のconfigを変更して古いrolloutを再解析しても、過去requestのtierは証明できません。
 
 ### Smoke Test が複数 Root を拾う
 

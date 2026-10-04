@@ -416,7 +416,7 @@ def iter_jsonl(path: Path, stats: JsonlStats | None = None) -> Iterator[dict[str
 
 
 def normalize_service_tier(value: Any) -> str:
-    """rolloutの実効service_tierを比較用に正規化する。欠損は推測しない。"""
+    """tierの表記だけを正規化する。request適用の証明にはしない。"""
     if isinstance(value, str):
         normalized = value.strip().lower()
         if normalized in {"priority", "fast"}:
@@ -424,6 +424,39 @@ def normalize_service_tier(value: Any) -> str:
         if normalized in {"default", "standard"}:
             return "standard"
     return "UNKNOWN"
+
+
+def tier_observation(obj: dict[str, Any], event_index: int) -> dict[str, Any]:
+    """既知のturn_context fieldだけを読む。ネストした未知schemaは採用しない。"""
+    payload = obj.get("payload") if isinstance(obj.get("payload"), dict) else obj
+    raw = payload.get("service_tier")
+    return {
+        "timestamp": obj.get("timestamp"),
+        "event_index": event_index,
+        "turn_id": payload.get("turn_id"),
+        "raw_value": raw if isinstance(raw, str) else None,
+        "value": normalize_service_tier(raw),
+        "source": "turn_context.service_tier",
+        "evidence": "observed_turn",
+    }
+
+
+def observed_tier(observations: list[dict[str, Any]]) -> str:
+    """全観測が同じ既知値の場合だけsummaryを返す。欠損・変更はUNKNOWN。"""
+    values = {item.get("value", "UNKNOWN") for item in observations}
+    if len(values) == 1 and values <= {"fast", "standard"}:
+        return next(iter(values))
+    return "UNKNOWN"
+
+
+def apply_tier_observations(record: Any, observations: list[dict[str, Any]]) -> None:
+    record.service_tier_observations.extend(observations)
+    record.observed_service_tier = observed_tier(record.service_tier_observations)
+    # service_tierは後方互換alias。単一requestやturn内全tokenのtierではない。
+    record.service_tier = record.observed_service_tier
+    if record.service_tier_observations:
+        record.service_tier_source = "turn_context.service_tier"
+        record.service_tier_evidence = "observed_turn"
 
 
 @dataclass
@@ -437,10 +470,22 @@ class SessionSummary:
     model: str = ""
     reasoning_effort: str = ""
     service_tier: str = "UNKNOWN"
+    # configured / observed / requestedは別の証拠。現行readerはobservedのみ取得する。
+    tier_schema_version: int = 1
+    configured_service_tier: str = "UNKNOWN"
+    configured_service_tier_source: str | None = None
+    observed_service_tier: str = "UNKNOWN"
+    service_tier_source: str | None = None
+    service_tier_evidence: str = "unknown"
+    service_tier_observations: list[dict[str, Any]] = field(default_factory=list)
+    requested_service_tier: str = "UNKNOWN"
+    requested_service_tier_source: str | None = None
+    request_tier_status: str = "UNVERIFIED"
     multi_agent_version: str = ""
     first_timestamp: str = ""
     last_timestamp: str = ""
     turn_context_count: int = 0
+    tier_unobserved_turn_count: int = 0
     json_errors: int = 0
     context_window: int | None = None
     context_tokens: int | None = None
@@ -458,17 +503,21 @@ def parse_session_summary(path: Path) -> SessionSummary:
     task_name: str | None = None
     model = ""
     effort = ""
-    service_tier = "UNKNOWN"
+    observations: list[dict[str, Any]] = []
     mav = ""
     first_timestamp = ""
     last_timestamp = ""
     turn_context_count = 0
+    tier_unobserved_turn_count = 0
+    active_turn_id: str | None = None
+    active_tier_observed = False
+    pending_tier_observations: list[dict[str, Any]] = []
     context_window: int | None = None
     context_tokens: int | None = None
     context_peak_tokens: int | None = None
     stats = JsonlStats()
 
-    for obj in iter_jsonl(path, stats):
+    for event_index, obj in enumerate(iter_jsonl(path, stats), 1):
         ts = obj.get("timestamp")
         if isinstance(ts, str):
             if not first_timestamp:
@@ -490,10 +539,31 @@ def parse_session_summary(path: Path) -> SessionSummary:
             value = first_key(payload, "effort") or first_key(payload, "reasoning_effort")
             if isinstance(value, str):
                 effort = value
-            service_tier = normalize_service_tier(first_key(payload, "service_tier"))
+            observation = tier_observation(obj, event_index)
+            observations.append(observation)
+            if active_turn_id is None:
+                pending_tier_observations.append(observation)
+            elif not observation["turn_id"] or observation["turn_id"] == active_turn_id:
+                active_tier_observed = True
             value = first_key(payload, "multi_agent_version")
             if isinstance(value, str):
                 mav = value
+
+        event = event_type(obj)
+        if event in {"task_started", "turn_started"}:
+            if active_turn_id is not None and not active_tier_observed:
+                tier_unobserved_turn_count += 1
+            active_turn_id = str(first_key(payload, "turn_id") or first_key(payload, "id") or "")
+            active_tier_observed = any(
+                not item["turn_id"] or item["turn_id"] == active_turn_id
+                for item in pending_tier_observations
+            )
+            pending_tier_observations = []
+        elif event in {"task_complete", "turn_complete"} and active_turn_id is not None:
+            if not active_tier_observed:
+                tier_unobserved_turn_count += 1
+            active_turn_id = None
+            active_tier_observed = False
 
         value = first_key(payload, "model_context_window")
         snapshot_window = nonnegative_int(value)
@@ -508,7 +578,9 @@ def parse_session_summary(path: Path) -> SessionSummary:
                 context_tokens = snapshot_tokens
                 context_peak_tokens = max(context_peak_tokens or 0, snapshot_tokens)
 
-    return SessionSummary(
+    if active_turn_id is not None and not active_tier_observed:
+        tier_unobserved_turn_count += 1
+    summary = SessionSummary(
         path=str(path),
         session_id=session_id,
         parent_thread_id=parent,
@@ -517,11 +589,11 @@ def parse_session_summary(path: Path) -> SessionSummary:
         is_child=is_child,
         model=model,
         reasoning_effort=effort,
-        service_tier=service_tier,
         multi_agent_version=mav,
         first_timestamp=first_timestamp,
         last_timestamp=last_timestamp,
         turn_context_count=turn_context_count,
+        tier_unobserved_turn_count=tier_unobserved_turn_count,
         json_errors=stats.json_errors,
         context_window=context_window,
         context_tokens=context_tokens,
@@ -529,6 +601,11 @@ def parse_session_summary(path: Path) -> SessionSummary:
         context_usage_pct=usage_pct(context_tokens, context_window),
         context_peak_usage_pct=usage_pct(context_peak_tokens, context_window),
     )
+    apply_tier_observations(summary, observations)
+    if tier_unobserved_turn_count:
+        # 別turnの既知観測だけでsession全体を既知profileにしない。
+        summary.service_tier = summary.observed_service_tier = "UNKNOWN"
+    return summary
 
 
 @dataclass
@@ -552,6 +629,17 @@ class Turn:
     model: str = ""
     reasoning_effort: str = ""
     service_tier: str = "UNKNOWN"
+    # configured / observed / requestedは別の証拠。現行readerはobservedのみ取得する。
+    tier_schema_version: int = 1
+    configured_service_tier: str = "UNKNOWN"
+    configured_service_tier_source: str | None = None
+    observed_service_tier: str = "UNKNOWN"
+    service_tier_source: str | None = None
+    service_tier_evidence: str = "unknown"
+    service_tier_observations: list[dict[str, Any]] = field(default_factory=list)
+    requested_service_tier: str = "UNKNOWN"
+    requested_service_tier_source: str | None = None
+    request_tier_status: str = "UNVERIFIED"
     multi_agent_version: str = ""
     execution_mode: str = "LEGACY_ROOT_MODEL"
     input_tokens: int = 0
@@ -732,7 +820,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
     parent: str | None = None
     latest_model = ""
     latest_effort = ""
-    latest_service_tier = "UNKNOWN"
+    pending_tier_observations: list[dict[str, Any]] = []
     latest_mav = ""
     turns: list[Turn] = []
     current: Turn | None = None
@@ -740,7 +828,7 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
     pending_user_rework_class = "NONE"
     pending_user_legacy_rework_cue = False
 
-    for obj in iter_jsonl(path):
+    for event_index, obj in enumerate(iter_jsonl(path), 1):
         typ = obj.get("type")
         payload = obj.get("payload") if isinstance(obj.get("payload"), dict) else obj
         if typ == "session_meta":
@@ -756,7 +844,13 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
             value = first_key(payload, "effort") or first_key(payload, "reasoning_effort")
             if isinstance(value, str):
                 latest_effort = value
-            latest_service_tier = normalize_service_tier(first_key(payload, "service_tier"))
+            observation = tier_observation(obj, event_index)
+            observed_turn_id = observation["turn_id"]
+            if current is None:
+                pending_tier_observations.append(observation)
+            elif not observed_turn_id or observed_turn_id == current.turn_id:
+                apply_tier_observations(current, [observation])
+            # 明示turn_idが違う履歴はlive turnへ流用しない。
             value = first_key(payload, "multi_agent_version")
             if isinstance(value, str):
                 latest_mav = value
@@ -802,11 +896,16 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
                 agent_role=role,
                 model=latest_model,
                 reasoning_effort=latest_effort,
-                service_tier=latest_service_tier,
                 multi_agent_version=latest_mav,
                 user_rework_class=pending_user_rework_class,
                 user_legacy_rework_cue=pending_user_legacy_rework_cue,
             )
+            # 開始前のcontextは一度だけ消費する。以前のturnからtierを継承しない。
+            apply_tier_observations(current, [
+                observation for observation in pending_tier_observations
+                if not observation["turn_id"] or observation["turn_id"] == current.turn_id
+            ])
+            pending_tier_observations = []
             snapshot_window = nonnegative_int(first_key(payload, "model_context_window"))
             if snapshot_window is not None:
                 current.context_window = snapshot_window
@@ -841,7 +940,6 @@ def parse_rollout_turns(path: Path) -> list[Turn]:
         if typ == "turn_context":
             current.model = latest_model or current.model
             current.reasoning_effort = latest_effort or current.reasoning_effort
-            current.service_tier = latest_service_tier
             current.multi_agent_version = latest_mav or current.multi_agent_version
 
         for name, call_id, args in extract_tool_calls(obj):

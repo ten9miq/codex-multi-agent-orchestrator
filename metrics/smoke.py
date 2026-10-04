@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Codex Multi-Agentの実効配線をrollout JSONLから検証するSmoke Testツール。"""
+"""Codex Multi-Agentのturn設定観測・配線を検証する。request tierは別証拠。"""
 from __future__ import annotations
 
 import argparse
@@ -99,14 +99,21 @@ def validate_profile(
     if record.turn_context_count == 0:
         issues.append("turn_context が見つかりません")
 
+    if (record.service_tier_evidence != "observed_turn"
+            or not record.service_tier_observations):
+        issues.append("service_tier のturn_context出所が未確認です")
+
+    if record.tier_unobserved_turn_count:
+        issues.append(f"service_tier の観測がないturnが {record.tier_unobserved_turn_count} 件あります")
+
     if is_root:
         expected = ("gpt-6-luna", "medium", "v2", "standard")
-        actual = (record.model, record.reasoning_effort, record.multi_agent_version, record.service_tier)
+        actual = (record.model, record.reasoning_effort, record.multi_agent_version, record.observed_service_tier)
         labels = ("model", "effort", "multi_agent_version", "service_tier")
         for label, exp, got in zip(labels, expected, actual):
             if got != exp:
                 issues.append(
-                    f"Root {label}: 期待値={exp}, 実効値={got or '<missing>'}"
+                    f"Root {label}: 期待値={exp}, turn観測値={got or '<missing>'}"
                 )
     else:
         if not record.agent_role:
@@ -119,11 +126,11 @@ def validate_profile(
                 ("model", model, record.model),
                 ("effort", effort, record.reasoning_effort),
                 ("multi_agent_version", mav, record.multi_agent_version),
-                ("service_tier", service_tier, record.service_tier),
+                ("service_tier", service_tier, record.observed_service_tier),
             ):
                 if got != exp:
                     issues.append(
-                        f"{record.agent_role} {label}: 期待値={exp}, 実効値={got or '<missing>'}"
+                        f"{record.agent_role} {label}: 期待値={exp}, turn観測値={got or '<missing>'}"
                     )
             if leaf and child_count:
                 issues.append(
@@ -284,7 +291,7 @@ def context_warnings(records: Iterable[SessionSummary]) -> list[str]:
 
 def print_table(records: list[SessionSummary], *, show_context: bool = False) -> None:
     # 機械識別子は英語のまま維持し、見出しだけ日本語化する。
-    headers = ("Session", "Parent", "Role", "Model", "Effort", "MAV", "Speed", "Task")
+    headers = ("Session", "Parent", "Role", "Model", "Effort", "MAV", "Observed tier", "Task")
     rows = [
         (
             short_id(item.session_id),
@@ -317,7 +324,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "指定時間以降のCodex rollout JSONLを解析し、"
-            "Root/Child/Grandchildの実効 model・effort・service_tier・Multi-Agent runtime・role を検証します。"
+            "Root/Child/Grandchildのturn設定観測とrole配線を検証します。request単位のtier適用は証明しません。"
         )
     )
     parser.add_argument(
@@ -429,6 +436,8 @@ def main() -> int:
             issues_by_id[record.session_id] = issues
 
     shape = shape_issues(args.expect, roots, children)
+    if not records:
+        shape.append("検証対象のRoot/ThreadSpawn sessionがありません")
     observed_context_warnings = context_warnings(records)
     warning_count = (
         sum(len(value) for value in issues_by_id.values())
@@ -440,7 +449,11 @@ def main() -> int:
         result = {
             "since": cutoff.isoformat(),
             "expect": args.expect,
+            # passは互換field。成功の範囲はturn設定観測・配線だけ。
             "pass": warning_count == 0,
+            "observed_config_pass": warning_count == 0,
+            "pass_scope": "observed_turn_configuration_and_wiring",
+            "request_tier_status": "UNVERIFIED",
             "warnings": warning_count,
             "shape_issues": shape,
             "unreadable": unreadable,
@@ -485,13 +498,15 @@ def main() -> int:
         for issue in observed_context_warnings:
             print(f"! Context（非致命）: {issue}")
 
+    print("REQUEST_TIER: UNVERIFIED")
+    print("turn_contextはturn設定の観測です。各requestへのtier適用・課金速度は証明しません。")
     if warning_count == 0:
-        print("RESULT: PASS")
-        print("実効model / effort / service_tier / Multi-Agent runtime / role配線は期待値と一致しています。")
+        print("RESULT: PASS (TURN_CONTEXT_PROFILE_ONLY)")
+        print("観測したturn設定とrole配線が期待値と一致しています。")
         return 0
 
     print(f"RESULT: CHECK（警告 {warning_count} 件）")
-    print("上記の「!」行を確認してください。設定または期待した配線形状と実効値が異なります。")
+    print("上記の「!」行を確認してください。観測したturn設定が不明、または設定期待値・配線形状と異なります。")
     return 1
 
 

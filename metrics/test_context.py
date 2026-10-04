@@ -10,7 +10,7 @@ from pathlib import Path
 
 import smoke
 from collect import mark_rework
-from rollout_reader import parse_rollout_turns, parse_session_summary
+from rollout_reader import apply_tier_observations, parse_rollout_turns, parse_session_summary
 
 
 def write_rollout(path: Path, values: list[dict]) -> None:
@@ -22,7 +22,7 @@ def rollout_values(*, include_context: bool = True) -> list[dict]:
         {"type": "session_meta", "payload": {"id": "root-a", "source": {}}},
         {
             "type": "turn_context",
-            "payload": {"model": "gpt-6-luna", "effort": "medium", "multi_agent_version": "v2", "service_tier": "priority"},
+            "payload": {"model": "gpt-6-luna", "effort": "medium", "multi_agent_version": "v2", "service_tier": "default"},
         },
         {
             "type": "event_msg",
@@ -83,10 +83,9 @@ class ContextObservabilityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "rollout-tier.jsonl"
             write_rollout(path, values)
-            self.assertEqual(parse_session_summary(path).service_tier, "fast")
-            self.assertEqual(parse_rollout_turns(path)[0].service_tier, "fast")
-            self.assertTrue(any("service_tier" in issue for issue in smoke.validate_profile(
-                parse_session_summary(path), is_root=True, depth=0, child_count=0)))
+            self.assertEqual(parse_session_summary(path).service_tier, "standard")
+            self.assertEqual(parse_rollout_turns(path)[0].service_tier, "standard")
+            self.assertEqual(smoke.validate_profile(parse_session_summary(path), is_root=True, depth=0, child_count=0), [])
             values[1]["payload"].pop("service_tier")
             write_rollout(path, values)
             self.assertEqual(parse_rollout_turns(path)[0].service_tier, "UNKNOWN")
@@ -100,8 +99,9 @@ class ContextObservabilityTests(unittest.TestCase):
                                     is_child=True, model=model, reasoning_effort=effort,
                                     multi_agent_version=mav, service_tier=tier,
                                     turn_context_count=1)
+            apply_tier_observations(record, [{"value": tier}])
             self.assertEqual(smoke.validate_profile(record, is_root=False, depth=1, child_count=0), [])
-            record.service_tier = "fast" if tier == "standard" else "standard"
+            record.observed_service_tier = "fast" if tier == "standard" else "standard"
             self.assertTrue(any("service_tier" in issue for issue in smoke.validate_profile(
                 record, is_root=False, depth=1, child_count=0)))
 
@@ -180,9 +180,7 @@ class ContextObservabilityTests(unittest.TestCase):
     def test_missing_context_is_nonfatal_even_with_expect(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             sessions = Path(temp)
-            values = rollout_values(include_context=False)
-            values[1]["payload"]["service_tier"] = "default"
-            write_rollout(sessions / "rollout-context.jsonl", values)
+            write_rollout(sessions / "rollout-context.jsonl", rollout_values(include_context=False))
             output = io.StringIO()
             argv = sys.argv
             try:
