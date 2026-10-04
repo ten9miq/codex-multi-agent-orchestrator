@@ -13,12 +13,12 @@ model_context_window = 872000
 # 応答スタイル。Routerの判断と結果統合を簡潔・実務的にする。
 # 未指定時: personalityなし（組み込みのCodex指示を使用）。
 personality = "pragmatic"
-# Root・Scout・Workerを含むLuna系はFast。Sol系とAstraは各agentファイルでStandardを明示する。
+# Rootと全active roleはStandardを明示する（allStandard）。
 # 未指定時: auto（backend/project設定に応じてtierを選択）。
-service_tier = "fast"
+service_tier = "default"
 
 [features]
-# Fastを選択する機能を有効化。各agentの速度はservice_tierで指定する。
+# Fast選択機能の可用性。trueでもFastを要求せず、全roleのservice_tierはdefault。
 fast_mode = true
 # Multi-Agent機能全体の有効化。
 # 未指定時: false相当（Multi-Agentを明示的に有効化しない）。

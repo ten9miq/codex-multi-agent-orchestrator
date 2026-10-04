@@ -1,5 +1,11 @@
 # Design Decisions
 
+## 2026-10-03: allStandard baseline
+
+Rootと全active roleを `service_tier = "default"` に統一します。model・effort・872K windowは維持し、archived Terraは再登録しません。`fast_mode = true` は選択機能を残すだけでFast要求ではありません。設定の静的検証は実際のrequest tierの証明ではなく、速度・利用枠への効果も未実測です。
+
+以下の2026-10-01節は変更前の判断記録です。Fast設定はこのallStandard方針で置き換えます。
+
 ## 2026-10-01: 薄いLuna Routerと6.1 Sol主担当
 
 変更前はLuna Medium RootからScout、Luna Worker、Sol Medium Worker、Sol Controllerへタスクを分類していました。変更後はRootをGPT-6 Luna / medium / Fastに維持し、会話内だけで確実に完結する単純処理以外をGPT-6.1 Sol / high / Standard Controllerへ渡します。

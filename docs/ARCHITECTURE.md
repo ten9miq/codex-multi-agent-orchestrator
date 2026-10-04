@@ -2,16 +2,16 @@
 
 ## 目的と責務
 
-RootはGPT-6 Luna / medium / Fastで依頼を分類し、task packetを渡し、主担当の回答を配送します。会話内の単純処理だけをDirectにし、調査・判断・ファイル操作・実装・検証が必要な通常依頼はGPT-6.1 Sol / high / Standardへ渡します。Lunaが委譲前に調査したり、結果の専門的判断をやり直したりする構成にはしません。
+RootはGPT-6 Luna / medium / Standardで依頼を分類し、task packetを渡し、主担当の回答を配送します。会話内の単純処理だけをDirectにし、調査・判断・ファイル操作・実装・検証が必要な通常依頼はGPT-6.1 Sol / high / Standardへ渡します。Lunaが委譲前に調査したり、結果の専門的判断をやり直したりする構成にはしません。
 
 ```mermaid
 flowchart TD
-    U[User] --> R["Luna Medium / Fast Root"]
+    U[User] --> R["Luna Medium / Standard Root"]
     R -->|"会話内だけで完結"| D[DIRECT_LUNA]
     R -->|"調査・判断・変更・検証"| C["6.1 Sol High / Standard Controller"]
     R -->|"必要な昇格"| A["Astra High / Standard Controller"]
-    C -->|"必要な場合だけ"| S["Luna Medium / Fast Scout"]
-    C -->|"独立実装"| W["Luna High / Fast または6.1 Sol High / Standard Worker"]
+    C -->|"必要な場合だけ"| S["Luna Medium / Standard Scout"]
+    C -->|"独立実装"| W["Luna High / Standard または6.1 Sol High / Standard Worker"]
     C -->|"局所分析"| E["6.1 Sol XHigh / Standard Expert"]
     A --> S
     A --> W
@@ -22,7 +22,7 @@ Controllerは必要な調査、設計、実装、テスト、最終回答まで�
 
 ## 設定と速度
 
-model、reasoning effort、service tierは独立です。Root・Scout・Workerを含むLuna系にFastを指定し、Sol系とAstraのregistered roleにはStandard (`default`) を明示します。子・孫agentの速度省略によるFast継承を防ぎます。feature flagのfast_modeは選択機能の有効化であり、全roleのFast指定ではありません。
+model、reasoning effort、service tierは独立です。Rootとすべてのregistered roleにはStandard (`default`) を明示します。速度省略による意図しない継承を防ぎます。feature flagのfast_modeは選択機能の有効化であり、全roleのFast指定ではありません。
 
 実効tierはrolloutが記録する範囲で観測します。tierがない・自動選択で確定できない場合は未検証とし、設定の静的検証を実運用の成功と混同しません。
 

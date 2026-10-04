@@ -30,7 +30,7 @@ agentは起動しないでください。ファイル変更、実装、詳細調
 python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("o") --expect root
 ```
 
-期待: `ROOT` は `gpt-6-luna / medium / v2 / fast`。
+期待: `ROOT` は `gpt-6-luna / medium / v2 / standard`。
 
 ### Luna Scout
 
@@ -70,8 +70,8 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" --since $SmokeStart.ToString("
 期待:
 
 ```text
-ROOT                gpt-6-luna  medium  v2  fast
-└─ worker_luna      gpt-6-luna  high    v2  fast
+ROOT                gpt-6-luna  medium  v2  standard
+└─ worker_luna      gpt-6-luna  high    v2  standard
 ```
 
 `worker_sol` は `--expect worker_sol` で確認します。期待値は `gpt-6.1-sol / high / v2 / standard` です。
@@ -116,9 +116,9 @@ Codex Multi-Agent Smoke Test
 rollout数    : 3
 期待配線      : controller_sol_scout
 
-[OK] ROOT | gpt-6-luna / medium / v2 / fast
+[OK] ROOT | gpt-6-luna / medium / v2 / standard
 └─ [OK] controller_sol | gpt-6.1-sol / high / v2 / standard
-   └─ [OK] scout | gpt-6-luna / medium / v2 / fast
+   └─ [OK] scout | gpt-6-luna / medium / v2 / standard
 
 RESULT: PASS
 実効model / effort / service_tier / Multi-Agent runtime / role配線は期待値と一致しています。
@@ -155,7 +155,7 @@ python "$env:USERPROFILE\.codex\metrics\smoke.py" `
 期待:
 
 ```text
-[OK] ROOT | gpt-6-luna / medium / v2 / fast
+[OK] ROOT | gpt-6-luna / medium / v2 / standard
 └─ [OK] controller_astra | gpt-6-astra / high / v2 / standard
 
 RESULT: PASS

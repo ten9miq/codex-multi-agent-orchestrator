@@ -123,4 +123,4 @@ collect.py / report.pyでtoken・完遂率・昇格率を確認
 
 ## 2026-10-01の構成
 
-上記は以前の経緯を保存した記録です。現在はLuna Medium / Fast Rootから、単純な会話内処理以外を6.1 Sol High / Standard Controllerへ渡します。ScoutもLuna Medium / Fastです。現行契約は[`AGENTS.md`](../AGENTS.md)、変更理由は[`DESIGN-DECISIONS.md`](DESIGN-DECISIONS.md)を参照してください。
+上記は以前の経緯を保存した記録です。現行allStandardではLuna Medium / Standard Rootから、単純な会話内処理以外を6.1 Sol High / Standard Controllerへ渡します。ScoutもLuna Medium / Standardです。現行契約は[`AGENTS.md`](../AGENTS.md)、変更理由は[`DESIGN-DECISIONS.md`](DESIGN-DECISIONS.md)を参照してください。

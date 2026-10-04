@@ -1,6 +1,6 @@
 model = "gpt-6-luna"
 model_reasoning_effort = "medium"
-service_tier = "fast"
+service_tier = "default"
 sandbox_mode = "read-only"
 
 developer_instructions = """
